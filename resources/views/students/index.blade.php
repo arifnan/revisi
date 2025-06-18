@@ -5,9 +5,11 @@
 @section('content')
 <div class="container mt-4">
     <h2>Daftar Siswa</h2>
-    <a href="{{ route('students.create') }}" class="btn btn-primary mb-3">Tambah Siswa</a>
+    <div class="mb-3">
+        <a href="{{ route('students.create') }}" class="btn btn-primary">Tambah Siswa</a>
+        <a href="{{ route('students.import.form') }}" class="btn btn-success">Import dari Excel</a>
+    </div>
 
-    <!-- Form Pencarian -->
     <form method="GET" action="{{ route('students.index') }}" class="mb-3">
         <div class="row">
             <div class="col-md-4">

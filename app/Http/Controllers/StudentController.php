@@ -4,11 +4,12 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Student;
+use App\Models\Form;
 use Illuminate\Support\Facades\Hash;
-// use Illuminate\Support\Facades\View;        // tambahkan ini
-// use Illuminate\Support\Facades\Redirect;    // tambahkan ini
-// use Illuminate\Support\Facades\Response;    // tambahkan ini
 use App\Http\Resources\FormResponseResource;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Imports\StudentsImport;
+
 
 class StudentController extends Controller
 {
@@ -68,7 +69,7 @@ class StudentController extends Controller
         ], 200);
     }
   
-  	public function favoriteForms()
+    public function favoriteForms()
     {
         // 'user_type' akan dicocokkan dengan nama class ini
         return $this->morphToMany(Form::class, 'user', 'favorite_forms');
@@ -96,5 +97,31 @@ class StudentController extends Controller
         // Gunakan FormResponseResource untuk format data yang konsisten
         return FormResponseResource::collection($responses);
     }
-  
+
+    // Perhatikan ada baris baru di sini
+    public function showImportForm()
+    {
+        return view('students.import');
+    }
+
+    public function importExcel(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv',
+        ]);
+
+        try {
+            Excel::import(new StudentsImport, $request->file('file'));
+            return redirect()->route('students.index')->with('success', 'Data siswa berhasil diimpor!');
+        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+            $failures = $e->failures();
+            $errors = [];
+            foreach ($failures as $failure) {
+                $errors[] = 'Baris ' . $failure->row() . ': ' . implode(', ', $failure->errors());
+            }
+            return redirect()->back()->with('error', 'Gagal mengimpor data: ' . implode('<br>', $errors));
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Terjadi kesalahan saat mengimpor data: ' . $e->getMessage());
+        }
+    }
 }
