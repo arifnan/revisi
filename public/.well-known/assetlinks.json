@@ -1,0 +1,9 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.example.eform",
+    "sha256_cert_fingerprints":
+    ["2C:14:4D:92:C0:D2:4A:DD:2D:82:C9:75:89:BC:7A:06:EF:24:A2:9F:39:EF:21:CC:23:CA:AF:5E:DB:AA:A7:97"]
+  }
+}]
