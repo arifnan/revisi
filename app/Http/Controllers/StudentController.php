@@ -13,21 +13,36 @@ use App\Imports\StudentsImport;
 
 class StudentController extends Controller
 {
-    public function index(Request $request) {
-        $query = Student::query();
-    
-        // Filter berdasarkan gender
+  public function index(Request $request) {
+        // Hapus atau jadikan komentar baris DB::enableQueryLog() dan dd(DB::getQueryLog());
+        // DB::enableQueryLog();
+
+        $allStudents = Student::all(); // Ambil semua siswa untuk difilter di PHP
+                                       // (karena kolom dienkripsi, filter di DB tidak langsung bisa)
+
+        // Filter di PHP setelah semua data diambil dan didekripsi
         if ($request->has('gender') && $request->gender !== '') {
-            $query->where('gender', $request->gender);
+            $genderToFilter = (int)$request->gender;
+            $allStudents = $allStudents->where('gender', $genderToFilter);
         }
     
-        // Filter berdasarkan kelas
         if ($request->has('grade') && $request->grade !== '') {
-            $query->where('grade', $request->grade);
+            $gradeToFilter = (string)$request->grade;
+            $allStudents = $allStudents->where('grade', $gradeToFilter);
         }
-    
-        $students = $query->get();
-    
+
+        // Sekarang, kita akan melakukan paginasi pada koleksi yang sudah difilter
+        $perPage = 10; // Jumlah siswa per halaman
+        $currentPage = \Illuminate\Pagination\LengthAwarePaginator::resolveCurrentPage();
+        $currentItems = $allStudents->slice(($currentPage - 1) * $perPage, $perPage)->all();
+        
+        $students = new \Illuminate\Pagination\LengthAwarePaginator($currentItems, count($allStudents), $perPage, $currentPage, [
+            'path' => $request->url(),
+            'query' => $request->query(),
+        ]);
+        
+        // dd(DB::getQueryLog()); // Hapus atau jadikan komentar
+
         return view('students.index', compact('students'));
     }
     
@@ -98,7 +113,6 @@ class StudentController extends Controller
         return FormResponseResource::collection($responses);
     }
 
-    // Perhatikan ada baris baru di sini
     public function showImportForm()
     {
         return view('students.import');
@@ -111,6 +125,7 @@ class StudentController extends Controller
         ]);
 
         try {
+            // Kita sudah membahas StudentsImport secara terpisah, jadi pastikan itu sudah final
             Excel::import(new StudentsImport, $request->file('file'));
             return redirect()->route('students.index')->with('success', 'Data siswa berhasil diimpor!');
         } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
