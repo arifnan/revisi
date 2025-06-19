@@ -5,9 +5,11 @@
 @section('content')
 <div class="container mt-4">
     <h2>Daftar Formulir</h2>
-    <a href="{{ route('forms.create') }}" class="btn btn-primary mb-3">Tambah Formulir</a>
+    <div class="mb-3">
+        <a href="{{ route('forms.create') }}" class="btn btn-primary">Tambah Formulir</a>
+        <a href="{{ route('responses.import.form') }}" class="btn btn-info">Import Respon Excel</a> {{-- Tambahkan ini --}}
+    </div>
 
-    <!-- Form Pencarian -->
     <form method="GET" action="{{ route('forms.index') }}" class="mb-3">
         <div class="row">
             <div class="col-md-4">
@@ -26,59 +28,71 @@
             </div>
         </div>
     </form>
-<!-- Filter berdasarkan Form -->
-<form method="GET" action="{{ route('responses.index') }}" class="mb-3">
-    <div class="input-group">
-        <select name="form_id" class="form-select">
-            <option value="">Pilih Formulir</option>
-            @foreach(App\Models\Form::all() as $form)
-                <option value="{{ $form->id }}" {{ request('form_id') == $form->id ? 'selected' : '' }}>
-                    {{ $form->title }}
-                </option>
-            @endforeach
-        </select>
-        <button type="submit" class="btn btn-primary">Tampilkan</button>
-    </div>
-</form>
 
-<!-- Tombol Export -->
-<div class="mb-3 d-flex gap-2">
-    <a href="{{ route('responses.export.pdf', ['form_id' => request('form_id')]) }}" class="btn btn-danger">Export PDF</a>
-    <a href="{{ route('responses.export.excel', ['form_id' => request('form_id')]) }}" class="btn btn-success">Export Excel</a>
-</div>
+    <form method="GET" action="{{ route('responses.index') }}" class="mb-3">
+        <div class="input-group">
+            <select name="form_id" class="form-select">
+                <option value="">Pilih Formulir (Filter Respon)</option>
+                @foreach(App\Models\Form::all() as $formOption)
+                    <option value="{{ $formOption->id }}" {{ request('form_id') == $formOption->id ? 'selected' : '' }}>
+                        {{ $formOption->title }}
+                    </option>
+                @endforeach
+            </select>
+            <button type="submit" class="btn btn-primary">Tampilkan Respon</button>
+        </div>
+    </form>
+
+    <div class="mb-3 d-flex gap-2">
+        <a href="{{ route('responses.export.pdf', ['form_id' => request('form_id')]) }}" class="btn btn-danger">Export PDF</a>
+        <a href="{{ route('responses.export.excel', ['form_id' => request('form_id')]) }}" class="btn btn-success">Export Excel</a>
+    </div>
 
     @if (session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
 
-    <table class="table table-bordered">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>Judul</th>
-                <th>Deskripsi</th>
-                <th>Nama Guru</th>
-                <th>Aksi</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($forms as $form)
-            <tr>
-                <td>{{ $loop->iteration }}</td>
-                <td>{{ $form->title }}</td>
-                <td>{{ $form->description }}</td>
-                <td>{{ $form->teacher->name }}</td>
-                <td>
-                    <a href="{{ route('forms.edit', $form->id) }}" class="btn btn-warning btn-sm">Edit</a>
-                    <form action="{{ route('forms.destroy', $form->id) }}" method="POST" class="d-inline">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Yakin ingin menghapus?')">Hapus</button>
-                    </form>
-                </td>
-            </tr>
-            @endforeach
-        </tbody>
-    </table>
+    <div class="table-responsive">
+        <table class="table table-bordered custom-form-table"> {{-- Tambahkan kelas kustom di sini --}}
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>ID Formulir</th>
+                    <th>Judul</th>
+                    {{-- Hapus kolom Deskripsi --}}
+                    <th>Guru</th>
+                    <th>Kode Formulir</th>
+                    <th>Jumlah Responden</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($forms as $form)
+                <tr>
+                    <td>{{ $loop->iteration }}</td>
+                    <td>{{ $form->id }}</td>
+                    <td>{{ $form->title }}</td>
+                    {{-- Hapus data kolom Deskripsi --}}
+                    <td>{{ $form->teacher->name ?? 'N/A' }}</td>
+                    <td>{{ $form->form_code }}</td>
+                    <td>{{ $form->responses_count }}</td>
+                    <td class="d-flex gap-1">
+                        <a href="{{ route('responses.detail_by_form', $form->id) }}" class="btn btn-info btn-sm">Lihat Detail</a>
+                        <a href="{{ route('forms.edit', $form->id) }}" class="btn btn-warning btn-sm">Edit</a>
+                        <form action="{{ route('forms.destroy', $form->id) }}" method="POST">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Yakin ingin menghapus formulir ini? Semua pertanyaan dan jawaban terkait akan ikut terhapus.')">Hapus</button>
+                        </form>
+                    </td>
+                </tr>
+                @empty
+                <tr>
+                    <td colspan="7" class="text-center">Tidak ada formulir yang ditemukan.</td> {{-- Sesuaikan colspan --}}
+                </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
 </div>
 @endsection

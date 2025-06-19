@@ -12,8 +12,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use App\Http\Resources\FormResponseResource;
-use App\Http\Resources\AnswerResource;
-use Illuminate\Support\Facades\DB; // Tambahkan ini untuk DB Facade
+use App\Http\Resources\AnswerResource; 
+use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel; 
+use App\Imports\ResponsesImport; 
 
 class ResponseController extends Controller
 {
@@ -45,10 +47,14 @@ class ResponseController extends Controller
      */
     public function showResponsesByForm(Form $form)
     {
-        // Ambil semua respons untuk formulir ini, termasuk student dan answers
-        $responses = $form->responses()->with(['student', 'answers.question.options'])->get();
+        // Ambil semua pertanyaan untuk formulir ini
+        $questions = $form->questions()->orderBy('id')->get(); 
 
-        return view('responses.detail_by_form', compact('form', 'responses'));
+        // Ambil semua respons untuk formulir ini, dengan data siswa (responden)
+        $responses = $form->responses()->with('student')->latest()->get();
+
+        // Pastikan $questions diteruskan ke view
+        return view('responses.detail_by_form', compact('form', 'questions', 'responses'));
     }
 
     /**
@@ -58,10 +64,48 @@ class ResponseController extends Controller
     public function showResponseDetail(Response $response)
     {
         // Eager load semua relasi yang dibutuhkan untuk tampilan detail
-        $response->load(['student', 'form.teacher', 'answers.question.options']);
+        $response->load(['student', 'form.teacher', 'responseAnswers.question']); 
         return view('responses.show', compact('response'));
     }
 
+    public function showImportForm()
+    {
+        return view('responses.import');
+    }
+
+    // Method untuk mengelola upload file Excel responden
+    public function importExcel(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv',
+        ]);
+
+        try {
+            $import = new ResponsesImport;
+            Excel::import($import, $request->file('file'));
+
+            $errors = $import->getErrors();
+            if (!empty($errors)) {
+                $errorMessages = [];
+                foreach ($errors as $failure) {
+                    $fieldAttribute = $failure->attribute() ? " (Field: {$failure->attribute()})" : '';
+                    $errorMessages[] = "Baris {$failure->row()}: " . implode(', ', $failure->errors()) . $fieldAttribute;
+                }
+                return redirect()->back()->with('error', 'Beberapa data gagal diimpor:<br>' . implode('<br>', $errorMessages));
+            }
+
+            return redirect()->route('responses.index')->with('success', 'Data responden dan jawaban berhasil diimpor!');
+        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+            $failures = $e->failures();
+            $errorMessages = []; 
+            foreach ($failures as $failure) {
+                $errorMessages[] = 'Baris ' . $failure->row() . ': ' . implode(', ', $failure->errors());
+            }
+            return redirect()->back()->with('error', 'Gagal mengimpor data:<br>' . implode('<br>', $errorMessages));
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Terjadi kesalahan saat mengimpor data: ' . $e->getMessage());
+        }
+    }
 
     /**
      * Menghapus sebuah respons dari database.
@@ -79,7 +123,7 @@ class ResponseController extends Controller
      */
     public function apiIndex()
     {
-        return response()->json(Response::with('answers')->get());
+        return response()->json(Response::with('responseAnswers')->get());
     }
 
     /**
@@ -99,8 +143,8 @@ class ResponseController extends Controller
             'form_id' => 'required|integer|exists:forms,id',
             'latitude' => 'nullable|numeric|between:-90,90',
             'longitude' => 'nullable|numeric|between:-180,180',
-            'answers' => 'required|json', // Android mengirim string JSON
-            'photo' => 'required|image|mimes:jpeg,png,jpg|max:4096', // Foto wajib, maks 4MB
+            'answers' => 'required|json', 
+            'photo' => 'required|image|mimes:jpeg,png,jpg|max:4096', 
         ]);
 
         if ($validator->fails()) {
@@ -117,10 +161,9 @@ class ResponseController extends Controller
         $formResponse = Response::create([
             'form_id' => $form->id,
             'student_id' => $user->id,
-            'photo_path' => $photoPath, // Simpan path relatif ke foto
+            'photo_path' => $photoPath, 
             'latitude' => $validatedData['latitude'] ?? null,
             'longitude' => $validatedData['longitude'] ?? null,
-            // Asumsi validasi lokasi dilakukan di client, atau bisa ditambahkan logika server di sini
             'is_location_valid' => $request->input('is_location_valid_from_client', true),
             'submitted_at' => now(),
         ]);
@@ -131,8 +174,8 @@ class ResponseController extends Controller
             foreach ($answersArray as $answerData) {
                 if (isset($answerData['question_id']) && array_key_exists('answer_text', $answerData)) {
                     $questionExists = Question::where('id', $answerData['question_id'])
-                                              ->where('form_id', $form->id)
-                                              ->exists();
+                                             ->where('form_id', $form->id)
+                                             ->exists();
                     if ($questionExists) {
                         ResponseAnswer::create([
                             'response_id' => $formResponse->id,
@@ -145,29 +188,27 @@ class ResponseController extends Controller
         }
 
         // 6. Kembalikan data yang baru dibuat menggunakan API Resource
-        $formResponse->load(['student', 'form.teacher', 'answers.question']);
+        $formResponse->load(['student', 'form.teacher', 'responseAnswers.question']); 
         return new FormResponseResource($formResponse);
     }
-  
+ 
     /**
      * Mengambil respons berdasarkan form untuk API.
      */
     public function apiIndexByForm(Request $request, Form $form)
-	{
-        // Logika untuk otorisasi dan mengambil data...
-        // Contoh:
+    {
         if ($request->user()->id !== $form->teacher_id) {
             return response()->json(['message' => 'Akses ditolak.'], 403);
         }
 
         $responses = Response::where('form_id', $form->id)
-                                         ->with('student')
-                                         ->latest('submitted_at')
-                                         ->get();
+                                             ->with('student')
+                                             ->latest('submitted_at')
+                                             ->get();
 
         return \App\Http\Resources\FormResponseResource::collection($responses);
-	}
-  
+    }
+ 
     /**
      * Ini sepertinya adalah metode web yang diganti oleh showResponsesByForm.
      * Jika ini tidak digunakan lagi sebagai endpoint web, bisa dihapus.
@@ -179,16 +220,14 @@ class ResponseController extends Controller
     {
         $user = $request->user();
 
-        // Autorisasi: Pastikan guru yang meminta adalah pemilik formulir
         if (!$user instanceof Teacher || $user->id !== $form->teacher_id) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        // Ambil semua response untuk form ini, beserta relasi yang diperlukan
         $responses = $form->responses()
-                          ->with(['student', 'answers.question'])
-                          ->orderBy('created_at', 'desc') // Menggunakan created_at untuk konsistensi
-                          ->get();
+                            ->with(['student', 'responseAnswers.question'])
+                            ->orderBy('created_at', 'desc')
+                            ->get();
 
         if ($responses->isEmpty()) {
             return response()->json(['message' => 'Belum ada siswa yang mengisi formulir ini.'], 200);
@@ -196,7 +235,7 @@ class ResponseController extends Controller
         
         return FormResponseResource::collection($responses);
     }
-  
+ 
     /**
      * Menampilkan detail spesifik dari sebuah respons, termasuk foto dan lokasi (untuk API).
      * Ini adalah endpoint untuk fitur "lihat detail riwayat".
@@ -205,18 +244,15 @@ class ResponseController extends Controller
     {
         $user = $request->user();
 
-        // Logika otorisasi (opsional tapi sangat disarankan)
         $isOwner = ($user instanceof Student && $user->id === $response->student_id);
-        $isTeacherOfForm = ($user instanceof Teacher && $user->id === $response->form->teacher_id);
+        $isTeacherOfForm = ($user instanceof Teacher && $response->form && $user->id === $response->form->teacher_id);
 
-        if (!$isOwner && (!$isTeacherOfForm || !$response->form)) { // Tambahkan pengecekan $response->form
+        if (!$isOwner && !$isTeacherOfForm) { 
             return response()->json(['message' => 'Akses ditolak.'], 403);
         }
 
-        // Eager load semua relasi yang dibutuhkan oleh resource
-        $response->load(['student', 'form.teacher', 'answers.question.options']);
+        $response->load(['student', 'form.teacher', 'responseAnswers.question']);
 
-        // Kembalikan data menggunakan resource untuk konsistensi format
         return new FormResponseResource($response);
     }
 

@@ -1,99 +1,132 @@
-<?
-namespace App\Http\Controllers;
+<?php
 
-use App\Models\Question;
+namespace App\Http\Controllers; // Sesuaikan dengan namespace Anda
+
 use App\Models\Form;
+use App\Models\Question;
 use Illuminate\Http\Request;
-use App\Http\Resources\QuestionResource;
+use Illuminate\Support\Str; // Diperlukan untuk Str::random
+use App\Http\Resources\QuestionResource; // Pastikan ini di-import
 use Illuminate\Validation\Rule;
+
 class QuestionController extends Controller
 {
-    // Metode Web (index, create, store, edit, update, destroy)
-    // Untuk metode web, Anda juga perlu menyesuaikan cara 'options' disimpan jika
-    // formulir web Anda mendukung pembuatan/pengeditan opsi.
-    // Fokus saat ini adalah pada API.
-
+    // Method index (jika Anda punya daftar semua pertanyaan terpisah)
     public function index()
     {
-        $questions = Question::with('form', 'options')->get(); // Load options untuk tampilan web
+        $questions = Question::with('form')->get(); // Ambil semua pertanyaan dengan form terkait
         return view('questions.index', compact('questions'));
     }
 
-    public function create()
+    // Method untuk menampilkan form tambah pertanyaan baru untuk form tertentu
+    public function create(Request $request)
     {
-        $forms = Form::all();
-        return view('questions.create', compact('forms'));
+        $form_id = $request->query('form_id'); // Ambil form_id dari query parameter
+        $form = Form::find($form_id); // Cari form berdasarkan ID
+
+        if (!$form) {
+            return redirect()->route('forms.index')->with('error', 'Formulir tidak ditemukan.');
+        }
+
+        return view('questions.create', compact('form'));
     }
 
+    // Method untuk menyimpan pertanyaan baru
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'form_id' => 'required|integer|exists:forms,id',
+        $validatedData = $request->validate([
+            'form_id' => 'required|exists:forms,id',
             'question_text' => 'required|string|max:65535',
-            'question_type' => ['required', 'string', Rule::in(['Text', 'MultipleChoice', 'Checkbox', 'LinearScale'])],
-            'required' => 'nullable|boolean', // Ubah is_required menjadi required
-            'options_text' => 'nullable|array', // Jika opsi dikirim sebagai array teks dari form web
-            'options_text.*' => 'nullable|string|max:255',
+            'question_type' => ['required', 'string', Rule::in(['Text', 'MultipleChoice', 'Checkbox', 'LinearScale', 'true_false', 'file_upload'])],
+            'required' => 'required|boolean',
+            'options' => 'nullable|array', // Hanya relevan untuk MultipleChoice/Checkbox/LinearScale
+            'options.*' => 'nullable|string|max:255',
         ]);
 
-        $data['required'] = $request->boolean('required'); // Pastikan boolean
+        $form = Form::find($validatedData['form_id']);
+        if (!$form) {
+            return redirect()->route('forms.index')->with('error', 'Formulir tidak ditemukan.');
+        }
 
-        $question = Question::create($data);
+        $question = $form->questions()->create([
+            'question_text' => $validatedData['question_text'],
+            'question_type' => $validatedData['question_type'],
+            'required' => $validatedData['required'],
+        ]);
 
-        if ($request->has('options_text') && is_array($request->options_text)) {
-            foreach ($request->options_text as $optionText) {
-                if (!empty($optionText)) {
+        // Simpan opsi jika tipe pertanyaan relevan
+        if (in_array($validatedData['question_type'], ['MultipleChoice', 'Checkbox', 'LinearScale']) && isset($validatedData['options']) && is_array($validatedData['options'])) {
+            foreach ($validatedData['options'] as $optionText) {
+                if (!empty($optionText) || $validatedData['question_type'] === 'LinearScale') {
                     $question->options()->create(['option_text' => $optionText]);
                 }
             }
         }
-        return redirect()->route('questions.index')->with('success', 'Question created.');
+
+        return redirect()->route('responses.detail_by_form', $form->id)->with('success', 'Pertanyaan berhasil ditambahkan.');
     }
 
-    public function edit(Question $question)
+    // Method untuk menampilkan form edit pertanyaan
+    public function edit(Question $question, Request $request)
     {
-        $forms = Form::all();
-        $question->load('options'); // Load opsi yang ada untuk ditampilkan di form edit
-        return view('questions.edit', compact('question', 'forms'));
+        $form_id = $request->query('form_id');
+        // Pastikan pertanyaan ini milik form yang benar jika form_id diberikan
+        if ($form_id && $question->form_id != $form_id) {
+            return redirect()->route('forms.index')->with('error', 'Pertanyaan tidak ditemukan pada formulir tersebut.');
+        }
+        $form = Form::find($question->form_id); // Ambil form untuk konteks
+
+        $question->load('options'); // Muat opsi jika ada
+
+        return view('questions.edit', compact('question', 'form'));
     }
 
+    // Method untuk update pertanyaan
     public function update(Request $request, Question $question)
     {
-        $data = $request->validate([
-            'form_id' => 'sometimes|required|integer|exists:forms,id',
-            'question_text' => 'sometimes|required|string|max:65535',
-            'question_type' => ['sometimes','required', 'string', Rule::in(['Text', 'MultipleChoice', 'Checkbox', 'LinearScale'])],
-            'required' => 'sometimes|nullable|boolean',
-            'options_text' => 'nullable|array',
-            'options_text.*' => 'nullable|string|max:255',
+        $validatedData = $request->validate([
+            'question_text' => 'required|string|max:65535',
+            'question_type' => ['required', 'string', Rule::in(['Text', 'MultipleChoice', 'Checkbox', 'LinearScale', 'true_false', 'file_upload'])],
+            'required' => 'required|boolean',
+            'options' => 'nullable|array', // Hanya relevan untuk MultipleChoice/Checkbox/LinearScale
+            'options.*' => 'nullable|string|max:255',
         ]);
-        if ($request->has('required')) {
-            $data['required'] = $request->boolean('required');
-        }
 
-        $question->update($data);
+        $question->update([
+            'question_text' => $validatedData['question_text'],
+            'question_type' => $validatedData['question_type'],
+            'required' => $validatedData['required'],
+        ]);
 
-        if ($request->has('options_text')) {
-            $question->options()->delete(); // Hapus opsi lama
-            if (is_array($request->options_text)) {
-                foreach ($request->options_text as $optionText) {
-                    if (!empty($optionText)) {
-                        $question->options()->create(['option_text' => $optionText]);
-                    }
+        // Update opsi jika tipe pertanyaan relevan
+        if (in_array($validatedData['question_type'], ['MultipleChoice', 'Checkbox', 'LinearScale']) && isset($validatedData['options']) && is_array($validatedData['options'])) {
+            $question->options()->delete(); // Hapus semua opsi lama
+            foreach ($validatedData['options'] as $optionText) {
+                if (!empty($optionText) || $validatedData['question_type'] === 'LinearScale') {
+                    $question->options()->create(['option_text' => $optionText]);
                 }
             }
+        } else {
+            // Jika tipe pertanyaan berubah dan tidak lagi memerlukan opsi, hapus opsi lama
+            $question->options()->delete();
         }
-        return redirect()->route('questions.index')->with('success', 'Question updated.');
+
+        return redirect()->route('responses.detail_by_form', $question->form_id)->with('success', 'Pertanyaan berhasil diperbarui.');
     }
 
-     public function destroy(Question $question)
+    // Method untuk menghapus pertanyaan
+    public function destroy(Question $question)
     {
-        // Opsi dan jawaban terkait akan terhapus jika onDelete('cascade') diset di migrasi
-        $question->delete();
-        return redirect()->route('questions.index')->with('success', 'Question deleted.');
+        $form_id = $question->form_id; // Ambil form_id sebelum dihapus
+        $question->delete(); // onDelete('cascade') di migrasi akan menghapus opsi dan jawaban terkait
+
+        return redirect()->route('responses.detail_by_form', $form_id)->with('success', 'Pertanyaan berhasil dihapus.');
     }
 
+    // =====================================================
     // API methods
+    // =====================================================
+
     public function apiIndex()
     {
         // Eager load options untuk disertakan dalam resource
@@ -105,7 +138,7 @@ class QuestionController extends Controller
         $data = $request->validate([
             'form_id' => 'required|integer|exists:forms,id',
             'question_text' => 'required|string|max:65535',
-            'question_type' => ['required', 'string', Rule::in(['Text', 'MultipleChoice', 'Checkbox', 'LinearScale'])],
+            'question_type' => ['required', 'string', Rule::in(['Text', 'MultipleChoice', 'Checkbox', 'LinearScale'])], // Sesuaikan rules ini dengan API clients Anda
             'options' => 'nullable|array',
             'options.*' => 'nullable|string|max:255',
             'required' => 'required|boolean',
@@ -128,6 +161,7 @@ class QuestionController extends Controller
                 }
             }
         }
+
         return new QuestionResource($question->load('options'));
     }
 
@@ -136,8 +170,8 @@ class QuestionController extends Controller
         $data = $request->validate([
             'form_id' => 'sometimes|required|integer|exists:forms,id',
             'question_text' => 'sometimes|required|string|max:65535',
-            'question_type' => ['sometimes','required', 'string', Rule::in(['Text', 'MultipleChoice', 'Checkbox', 'LinearScale'])],
-            'options' => 'nullable|array', // 'nullable' berarti field boleh tidak ada di request
+            'question_type' => ['sometimes','required', 'string', Rule::in(['Text', 'MultipleChoice', 'Checkbox', 'LinearScale'])], // Sesuaikan rules ini
+            'options' => 'nullable|array',
             'options.*' => 'nullable|string|max:255',
             'required' => 'sometimes|required|boolean',
         ]);
@@ -150,12 +184,13 @@ class QuestionController extends Controller
             $question->options()->delete(); // Hapus opsi lama
             if (is_array($data['options'])) {
                 foreach ($data['options'] as $optionText) {
-                     if (!empty($optionText) || $question->question_type === 'LinearScale') {
+                    if (!empty($optionText) || $question->question_type === 'LinearScale') {
                         $question->options()->create(['option_text' => $optionText]);
                     }
                 }
             }
         }
+
         return new QuestionResource($question->fresh()->load('options'));
     }
 

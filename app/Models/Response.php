@@ -62,4 +62,9 @@ class Response extends Model
         }
         return null;
     }
+
+        public function responseAnswers()
+    {
+        return $this->hasMany(ResponseAnswer::class); // <--- PASTIKAN INI ADA DI Response.php
+    }
 }

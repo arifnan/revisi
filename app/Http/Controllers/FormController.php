@@ -17,21 +17,26 @@ class FormController extends Controller
     public function index(Request $request) // Tambahkan Request $request
     {
         $user = Auth::user();
-        $forms = collect(); // Inisialisasi koleksi kosong
+        $formsQuery = Form::query(); // Mulai dengan query builder
 
         if ($user && $user instanceof Teacher) {
-            $forms = Form::where('teacher_id', $user->id)->with('teacher')->latest()->get();
+            $formsQuery->where('teacher_id', $user->id);
             $teachers = Teacher::where('id', $user->id)->get(); // Hanya guru yang login
         } else {
             // Jika admin atau peran lain yang bisa melihat semua form
-            $forms = Form::with('teacher')->latest()->get();
             $teachers = Teacher::all(); // Untuk admin, tampilkan semua guru untuk filter
         }
         
+        // Eager load teacher dan hitung jumlah responses
+        // Pindahkan withCount('responses') ke query builder
+        $formsQuery->with('teacher')->withCount('responses')->latest(); 
+
         // Filter formulir berdasarkan teacher_id jika ada dalam request
         if ($request->has('teacher_id') && $request->teacher_id !== '') {
-            $forms = $forms->where('teacher_id', $request->teacher_id);
+            $formsQuery->where('teacher_id', $request->teacher_id); // Terapkan filter pada query builder
         }
+
+        $forms = $formsQuery->get(); // Eksekusi query untuk mendapatkan formulir
 
         return view('forms.index', compact('forms', 'teachers')); // Tambahkan 'teachers' di compact
     }
@@ -45,7 +50,7 @@ class FormController extends Controller
 
         if ($authUser instanceof Teacher) {
              $teachers = Teacher::where('id', $authUser->id)->get();
-        } else if ($authUser && $authUser->isAdmin()) { // Contoh jika ada method isAdmin() di model User admin
+        } else if ($authUser && method_exists($authUser, 'isAdmin') && $authUser->isAdmin()) { // Contoh jika ada method isAdmin() di model User admin
             // Untuk admin, mungkin tampilkan semua guru atau batasi
             $teachers = Teacher::all();
         }
@@ -227,7 +232,7 @@ public function apiStore(Request $request)
                     $currentQuestion->options()->delete(); // Hapus opsi lama untuk pertanyaan ini
                     foreach ($questionData['options'] as $optionText) {
                         if (!empty($optionText) || $questionData['question_type'] === 'LinearScale') {
-                            $currentQuestion->options()->create(['option_text' => $optionText]);
+                             $currentQuestion->options()->create(['option_text' => $optionText]);
                         }
                     }
                 }

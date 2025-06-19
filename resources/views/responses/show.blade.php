@@ -1,52 +1,73 @@
 @extends('layouts.app')
 
-@section('title', 'Detail Jawaban')
+@section('title', 'Detail Jawaban: ' . ($response->student->name ?? 'N/A'))
 
 @section('content')
 <div class="container mt-4">
-    <h2>Detail Jawaban</h2>
-    <a href="{{ route('responses.index') }}" class="btn btn-secondary mb-3">Kembali</a>
+    <h2>Detail Jawaban untuk Formulir: {{ $response->form->title }}</h2>
+    <p>Responden: <strong>{{ $response->student->name ?? 'N/A' }}</strong> (Email: {{ $response->student->email ?? 'N/A' }})</p>
+    <p>Waktu Respon: {{ $response->created_at->format('d M Y H:i') }}</p>
+    <a href="{{ route('responses.detail_by_form', $response->form->id) }}" class="btn btn-secondary mb-3">Kembali ke Daftar Responden</a>
 
-    <div class="card">
+    {{-- Bagian untuk menampilkan Foto, Longitude, dan Latitude --}}
+    <div class="card mt-3 mb-4">
+        <div class="card-header">
+            <h4>Informasi Tambahan Respon</h4>
+        </div>
         <div class="card-body">
-            <h5 class="card-title">Respon ID: {{ $response->id }}</h5>
-            <p class="card-text">Formulir: <strong>{{ $response->form->title }}</strong></p>
+            @if ($response->photo_path)
+                <div class="mb-3">
+                    <strong>Foto Respon:</strong><br>
+                    <img src="{{ $response->photo_url }}" alt="Foto Respon" class="img-fluid" style="max-width: 300px; height: auto;">
+                </div>
+            @endif
+
+            @if ($response->latitude && $response->longitude)
+                <div class="mb-3">
+                    <strong>Koordinat Lokasi:</strong><br>
+                    Latitude: {{ $response->latitude ?? 'N/A' }}<br>
+                    Longitude: {{ $response->longitude ?? 'N/A' }}<br>
+                    @if ($response->is_location_valid)
+                        <span class="badge bg-success">Lokasi Valid</span>
+                    @else
+                        <span class="badge bg-warning">Lokasi Tidak Valid</span>
+                    @endif
+                    @if ($response->formatted_address)
+                        <br>Alamat: {{ $response->formatted_address }}
+                    @endif
+                </div>
+            @endif
+
+            @if (!$response->photo_path && (!$response->latitude || !$response->longitude))
+                <p>Tidak ada informasi foto atau lokasi yang tersedia untuk respon ini.</p>
+            @endif
         </div>
     </div>
+    {{-- Akhir Bagian Tambahan --}}
 
-    <h4 class="mt-4">Jawaban Pengguna:</h4>
-    @foreach($response->answers as $answer)
-        <div class="card mb-3">
-            <div class="card-body">
-                <h5 class="card-title">{{ $answer->question->question_text }}</h5>
-                
-                @if($answer->answer_text)
-                    <p><strong>Jawaban:</strong> {{ $answer->answer_text }}</p>
-                @endif
-
-                @if($answer->option_id)
-                    <p><strong>Pilihan:</strong> {{ $answer->option->option_text }}</p>
-                @endif
-
-                @if($answer->file_url)
-                    <p><strong>Foto Jawaban:</strong></p>
-                    <img src="{{ asset($answer->file_url) }}" alt="Jawaban Gambar" width="200">
-                @endif
-
-                @if($answer->latitude && $answer->longitude)
-                    <p><strong>Lokasi:</strong> {{ $answer->formatted_address }}</p>
-                    <p><strong>Koordinat:</strong> {{ $answer->latitude }}, {{ $answer->longitude }}</p>
-                    <iframe
-                        width="100%"
-                        height="250"
-                        style="border:0"
-                        loading="lazy"
-                        allowfullscreen
-                        src="https://www.google.com/maps/embed/v1/view?key=YOUR_GOOGLE_MAPS_API_KEY&center={{ $answer->latitude }},{{ $answer->longitude }}&zoom=15">
-                    </iframe>
-                @endif
-            </div>
+    <div class="card mt-3">
+        <div class="card-header">
+            <h4>Daftar Jawaban</h4>
         </div>
-    @endforeach
+        <ul class="list-group list-group-flush">
+            @forelse ($response->responseAnswers as $answer)
+                <li class="list-group-item">
+                    <strong>{{ $answer->question->question_text ?? 'Pertanyaan Tidak Ditemukan' }}</strong>:<br>
+                    {{-- Menampilkan jawaban berdasarkan tipe pertanyaan --}}
+                    @if ($answer->question->question_type == 'file_upload' && $answer->file_url)
+                        <a href="{{ asset('storage/' . $answer->file_url) }}" target="_blank" class="btn btn-sm btn-outline-primary mt-2">Lihat File</a>
+                    @elseif ($answer->question->question_type == 'multiple_choice' || $answer->question->question_type == 'checkbox')
+                        - {{ $answer->answer_text ?? 'Tidak ada jawaban' }}
+                    @elseif ($answer->question->question_type == 'true_false')
+                        - {{ $answer->answer_text == 1 ? 'True' : ($answer->answer_text == 0 ? 'False' : 'Tidak ada jawaban') }}
+                    @else
+                        - {{ $answer->answer_text ?? 'Tidak ada jawaban' }}
+                    @endif
+                </li>
+            @empty
+                <li class="list-group-item">Tidak ada jawaban ditemukan untuk respon ini.</li>
+            @endforelse
+        </ul>
+    </div>
 </div>
 @endsection

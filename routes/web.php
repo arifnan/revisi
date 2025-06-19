@@ -54,6 +54,8 @@ Route::get('/admins', [AdminController::class, 'index']); // Menampilkan daftar 
     // Export Responses
     Route::get('/export-responses/pdf', [ResponseExportController::class, 'exportPdf'])->name('responses.export.pdf');
     Route::get('/export-responses/excel', [ResponseExportController::class, 'exportExcel'])->name('responses.export.excel');
+    Route::get('responses/import', [ResponseController::class, 'showImportForm'])->name('responses.import.form');
+    Route::post('responses/import', [ResponseController::class, 'importExcel'])->name('responses.import.excel');
 
 // **PROTECTED ROUTES (Hanya bisa diakses jika sudah login)**
 Route::middleware(['auth:admin'])->group(function () {

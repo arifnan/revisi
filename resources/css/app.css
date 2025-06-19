@@ -1,12 +1,46 @@
-@import 'tailwindcss';
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
-@source "../**/*.blade.php";
-@source "../**/*.js";
-@source "../**/*.vue";
+/* resources/css/app.css atau file CSS kustom Anda */
 
-@theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+/* Pastikan ini dimuat setelah Bootstrap jika Anda menggunakan Bootstrap */
+
+/* Gaya untuk tabel kustom */
+.custom-form-table {
+    border-collapse: collapse; /* Hilangkan spasi antar sel */
+    width: 100%;
+}
+
+.custom-form-table th,
+.custom-form-table td {
+    border: 1px solid #0056ad; /* Border tipis untuk sel */
+    padding: 0.75rem; /* Padding standar Bootstrap */
+    text-align: left;
+    vertical-align: middle; /* Pusatkan vertikal */
+    white-space: nowrap; /* Mencegah teks di header/aksi tergulung ke baris baru */
+}
+
+.custom-form-table th {
+    background-color: #002040; /* Latar belakang header lebih terang */
+    font-weight: bold;
+    color: #495057; /* Warna teks header */
+}
+
+/* Warna latar belakang selang-seling */
+.custom-form-table tbody tr:nth-child(odd) {
+    background-color: #f2f2f2; /* Warna terang untuk baris ganjil */
+}
+
+.custom-form-table tbody tr:nth-child(even) {
+    background-color: #ffffff; /* Warna putih untuk baris genap */
+}
+
+/* Efek hover pada baris */
+.custom-form-table tbody tr:hover {
+    background-color: #041e38; /* Warna saat hover */
+}
+
+/* Penyesuaian untuk kolom Aksi agar tombol tetap sebaris */
+.custom-form-table td.d-flex.gap-1 {
+    /* Atur lebar minimum agar tombol tidak terlalu sempit, sesuaikan jika perlu */
+    min-width: 180px; /* Sesuaikan lebar ini berdasarkan jumlah tombol dan teks */
+    flex-wrap: nowrap; /* Pastikan tombol tidak wrap jika ada ruang */
 }
