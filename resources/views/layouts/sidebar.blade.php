@@ -44,18 +44,6 @@
         <hr class="my-1 border-light">
     </li>
     <li class="nav-item mb-1">
-        <a href="{{ route('questions.index') }}" class="nav-link text-white d-flex align-items-center">
-            <i class="bi bi-list-task me-2"></i><span>Kelola Pertanyaan</span>
-        </a>
-        <hr class="my-1 border-light">
-    </li>
-    <li class="nav-item mb-1">
-        <a href="{{ route('responses.index') }}" class="nav-link text-white d-flex align-items-center">
-            <i class="bi bi-clipboard-check me-2"></i><span>Lihat Jawaban</span>
-        </a>
-        <hr class="my-1 border-light">
-    </li>
-    <li class="nav-item mb-1">
         <a href="{{ route('admin.index') }}" class="nav-link text-white d-flex align-items-center">
             <i class="bi bi-person-gear me-2"></i><span>Kelola Admin</span>
         </a>

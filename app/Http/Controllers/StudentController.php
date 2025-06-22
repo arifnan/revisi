@@ -32,7 +32,7 @@ class StudentController extends Controller
         }
 
         // Sekarang, kita akan melakukan paginasi pada koleksi yang sudah difilter
-        $perPage = 10; // Jumlah siswa per halaman
+        $perPage = 100; // Jumlah siswa per halaman
         $currentPage = \Illuminate\Pagination\LengthAwarePaginator::resolveCurrentPage();
         $currentItems = $allStudents->slice(($currentPage - 1) * $perPage, $perPage)->all();
         
