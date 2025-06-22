@@ -15,8 +15,11 @@ use Maatwebsite\Excel\Validators\Failure;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Str; // <-- SOLUSI 1: Tambahkan ini untuk menggunakan Str facade
+use Maatwebsite\Excel\Concerns\SkipsOnFailure; // <-- SOLUSI 2: Tambahkan interface ini
+use Maatwebsite\Excel\Concerns\SkipsOnError;   // <-- SOLUSI 2: Tambahkan interface ini
 
-class ResponsesImport implements ToCollection, WithHeadingRow, WithValidation
+class ResponsesImport implements ToCollection, WithHeadingRow, WithValidation, SkipsOnFailure, SkipsOnError // <-- SOLUSI 2: Implementasikan interface
 {
     private $errors = [];
 
@@ -26,7 +29,7 @@ class ResponsesImport implements ToCollection, WithHeadingRow, WithValidation
         // Menggunakan student_email, form_code, dan submitted_at sebagai identifikasi unik respons
         $groupedResponses = $rows->groupBy(function ($row) {
             // Pastikan kunci-kunci ini ada dan digabungkan menjadi string unik
-            return $row['student_email'] . '-' . $row['form_code'] . '-' . $row['submitted_at'];
+            return ($row['student_email'] ?? '') . '-' . ($row['form_code'] ?? '') . '-' . ($row['submitted_at'] ?? '');
         });
 
         foreach ($groupedResponses as $uniqueResponseKey => $responseRows) {
@@ -34,16 +37,21 @@ class ResponsesImport implements ToCollection, WithHeadingRow, WithValidation
             try {
                 $firstRow = $responseRows->first();
 
+                // Validasi data penting dari baris pertama
+                if (empty($firstRow['student_email']) || empty($firstRow['form_code']) || empty($firstRow['submitted_at'])) {
+                     throw new \Exception("Data pokok (email siswa, kode formulir, waktu submit) tidak lengkap pada baris pertama grup ini.");
+                }
+
                 // 1. Dapatkan Student
                 $student = Student::where('email', $firstRow['student_email'])->first();
                 if (!$student) {
-                    throw new \Exception("Siswa dengan email '{$firstRow['student_email']}' tidak ditemukan.");
+                    throw new \Exception("Siswa dengan email '{$firstRow['student_email']}' tidak ditemukan. Baris: " . ($firstRow->row ?? 'N/A'));
                 }
 
                 // 2. Dapatkan Form
                 $form = Form::where('form_code', $firstRow['form_code'])->first();
                 if (!$form) {
-                    throw new \Exception("Formulir dengan kode '{$firstRow['form_code']}' tidak ditemukan.");
+                    throw new \Exception("Formulir dengan kode '{$firstRow['form_code']}' tidak ditemukan. Baris: " . ($firstRow->row ?? 'N/A'));
                 }
 
                 // 3. Buat atau Temukan Respons Utama
@@ -68,27 +76,37 @@ class ResponsesImport implements ToCollection, WithHeadingRow, WithValidation
 
                 // Update photo_path/location jika respons sudah ada tapi data ini belum ada
                 if (!$response->wasRecentlyCreated) {
+                    $changed = false;
                     if (empty($response->photo_path) && !empty($firstRow['photo_url'])) {
                         $response->photo_path = $firstRow['photo_url'];
+                        $changed = true;
                     }
-                    if (empty($response->latitude) && !empty($firstRow['latitude'])) {
+                    if (empty($response->latitude) && !empty($firstRow['latitude']) && empty($response->longitude) && !empty($firstRow['longitude'])) {
                         $response->latitude = $firstRow['latitude'];
                         $response->longitude = $firstRow['longitude'];
                         $response->is_location_valid = $this->validateLocation($firstRow['latitude'], $firstRow['longitude']);
+                        $changed = true;
                     }
-                    $response->save();
+                    if ($changed) {
+                        $response->save();
+                    }
                 }
 
-                // 4. Proses Setiap Jawaban
+                // 4. Proses Setiap Jawaban dari BARIS-BARIS DALAM GRUP
                 foreach ($responseRows as $row) {
-                    // Dapatkan Pertanyaan
+                    // Dapatkan Pertanyaan berdasarkan form_id dan question_text dari baris saat ini
                     $question = Question::where('form_id', $form->id)
-                                        ->where('question_text', $row['question_text'])
+                                        ->where('question_text', $row['question_text'] ?? null) // Pastikan question_text ada
                                         ->first();
                     if (!$question) {
-                        // Log error atau lewati jika pertanyaan tidak ditemukan
-                        // Ini akan ditangkap oleh validasi di rules(), tapi ini untuk logika bisnis
-                        continue;
+                        // Jika pertanyaan tidak ditemukan, tambahkan sebagai kegagalan
+                        $this->errors[] = new Failure(
+                            $row->row(), // <-- SOLUSI 3: Gunakan row() untuk nomor baris
+                            'question_text',
+                            ["Pertanyaan '{$row['question_text']}' tidak ditemukan untuk formulir '{$form->form_code}'."],
+                            $row->toArray()
+                        );
+                        continue; // Lanjutkan ke baris berikutnya
                     }
 
                     $optionId = null;
@@ -97,8 +115,13 @@ class ResponsesImport implements ToCollection, WithHeadingRow, WithValidation
                         if ($option) {
                             $optionId = $option->id;
                         } else {
-                            // Jika opsi tidak ditemukan, mungkin ada typo atau opsi baru
-                            // Anda bisa membuat opsi baru atau mencatat error
+                            // Jika opsi tidak ditemukan, tambahkan sebagai kegagalan
+                            $this->errors[] = new Failure(
+                                $row->row(), // <-- SOLUSI 3
+                                'option_text',
+                                ["Opsi '{$row['option_text']}' tidak ditemukan untuk pertanyaan '{$row['question_text']}'."],
+                                $row->toArray()
+                            );
                         }
                     }
 
@@ -111,23 +134,41 @@ class ResponsesImport implements ToCollection, WithHeadingRow, WithValidation
                         [
                             'answer_text' => $row['answer_text'] ?? null,
                             'option_id' => $optionId,
-                            'file_url' => $row['file_url'] ?? null, // Jika ada kolom file_url di response_answers
-                            'latitude' => $row['latitude'] ?? null, // Jika ada kolom latitude di response_answers
-                            'longitude' => $row['longitude'] ?? null, // Jika ada kolom longitude di response_answers
-                            'formatted_address' => $row['formatted_address'] ?? null, // Jika ada kolom formatted_address di response_answers
+                            'file_url' => $row['file_url'] ?? null,
+                            // Anda tidak boleh menyimpan latitude/longitude/address di ResponseAnswer
+                            // kecuali jika pertanyaan itu sendiri adalah pertanyaan lokasi spesifik.
+                            // Data lokasi umumnya disimpan di model Response utama.
+                            // Jika memang ada pertanyaan lokasi terpisah, maka kolom ini mungkin relevan.
+                            // 'latitude' => $row['latitude'] ?? null, 
+                            // 'longitude' => $row['longitude'] ?? null, 
+                            // 'formatted_address' => $row['formatted_address'] ?? null,
                         ]
                     );
                 }
 
                 DB::commit();
 
+            } catch (ValidationException $e) {
+                DB::rollBack();
+                // Kegagalan validasi dari rule() akan ditangkap oleh SkipsOnFailure
+                // Ini untuk kegagalan validasi custom di dalam collection()
+                foreach ($e->errors() as $field => $messages) {
+                    foreach ($messages as $message) {
+                        $this->errors[] = new Failure(
+                            $firstRow->row(), // <-- SOLUSI 3
+                            $field,
+                            [$message],
+                            $firstRow->toArray()
+                        );
+                    }
+                }
             } catch (\Exception $e) {
                 DB::rollBack();
                 $this->errors[] = new Failure(
-                    $firstRow->row, // Gunakan nomor baris dari baris pertama dalam grup
-                    'general',
-                    ["Gagal mengimpor respon ({$uniqueResponseKey}): " . $e->getMessage()],
-                    []
+                    $firstRow->row(), // <-- SOLUSI 3: Gunakan row()
+                    'general', // <-- SOLUSI 4: Pastikan ini string
+                    ["Gagal mengimpor respon ({$uniqueResponseKey}) dari baris " . ($firstRow->row() ?? 'N/A') . ": " . $e->getMessage()],
+                    $firstRow->toArray() // Berikan seluruh baris untuk konteks
                 );
             }
         }
@@ -142,12 +183,26 @@ class ResponsesImport implements ToCollection, WithHeadingRow, WithValidation
             'photo_url' => 'nullable|url|max:2048', // URL gambar
             'latitude' => 'nullable|numeric|between:-90,90',
             'longitude' => 'nullable|numeric|between:-180,180',
-            'question_text' => 'required|string',
+            'question_text' => 'required|string', // Pastikan setiap baris memiliki teks pertanyaan
             'answer_text' => 'nullable|string',
             'option_text' => 'nullable|string',
-            // Pastikan kolom lain yang Anda butuhkan juga divalidasi
             'file_url' => 'nullable|string|max:2048', // Untuk jawaban berupa file_upload
             'formatted_address' => 'nullable|string|max:255',
+        ];
+    }
+
+    public function customValidationMessages(): array
+    {
+        return [
+            'form_code.required' => 'Kolom "kode_formulir" wajib diisi.',
+            'form_code.exists' => 'Kode formulir tidak ditemukan.',
+            'student_email.required' => 'Kolom "student_email" wajib diisi.',
+            'student_email.email' => 'Format email siswa tidak valid.',
+            'student_email.exists' => 'Email siswa tidak ditemukan.',
+            'submitted_at.required' => 'Kolom "submitted_at" wajib diisi.',
+            'submitted_at.date_format' => 'Format "submitted_at" harus YYYY-MM-DD HH:MM:SS.',
+            'question_text.required' => 'Kolom "question_text" wajib diisi.',
+            // Tambahkan pesan untuk aturan lain jika perlu
         ];
     }
 
@@ -158,7 +213,27 @@ class ResponsesImport implements ToCollection, WithHeadingRow, WithValidation
         return is_numeric($latitude) && is_numeric($longitude);
     }
 
-    public function getErrors()
+    // <-- SOLUSI 2: Tambahkan metode ini untuk SkipsOnFailure
+    public function onFailure(Failure ...$failures)
+    {
+        foreach ($failures as $failure) {
+            $this->errors[] = $failure;
+        }
+    }
+
+    // <-- SOLUSI 2: Tambahkan metode ini untuk SkipsOnError
+    public function onError(\Throwable $e)
+    {
+        // Tangani kesalahan umum yang tidak tertangkap oleh validasi baris
+        $this->errors[] = new Failure(
+            0, // Gunakan 0 atau nomor baris yang relevan jika bisa diidentifikasi
+            'general_error', // <-- SOLUSI 4: Pastikan ini string
+            ['Terjadi kesalahan umum saat mengimpor: ' . $e->getMessage()],
+            []
+        );
+    }
+
+    public function getErrors(): array
     {
         return $this->errors;
     }

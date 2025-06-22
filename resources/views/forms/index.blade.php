@@ -12,9 +12,10 @@
             <a href="{{ route('forms.create') }}" class="btn btn-primary shadow-sm">
                 <i class="bi bi-plus-circle"></i> Tambah
             </a>
-            <a href="{{ route('responses.import.form') }}" class="btn btn-info shadow-sm">
-                <i class="bi bi-upload"></i> Import Excel
-            </a>
+            {{-- Hapus atau ubah tombol import global ini jika tidak dibutuhkan lagi --}}
+            {{-- <a href="{{ route('responses.import.form') }}" class="btn btn-info shadow-sm">
+                <i class="bi bi-upload"></i> Import Excel (Global)
+            </a> --}}
         </div>
     </div>
 

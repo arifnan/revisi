@@ -40,6 +40,8 @@ Route::get('/admins', [AdminController::class, 'index']); // Menampilkan daftar 
     Route::resource('responses', ResponseController::class)->except(['show']);
     Route::get('/responses/form/{form}', [ResponseController::class, 'showResponsesByForm'])->name('responses.detail_by_form');
     Route::get('/responses/{response}', [ResponseController::class, 'showResponseDetail'])->name('responses.show');
+    Route::get('/responses/create/{form}', [ResponseController::class, 'createResponse'])->name('responses.create');
+    Route::post('/responses/store', [ResponseController::class, 'storeResponse'])->name('responses.store');
 
     // CRUD Guru
     Route::resource('teachers', TeacherController::class);
@@ -54,8 +56,14 @@ Route::get('/admins', [AdminController::class, 'index']); // Menampilkan daftar 
     // Export Responses
     Route::get('/export-responses/pdf', [ResponseExportController::class, 'exportPdf'])->name('responses.export.pdf');
     Route::get('/export-responses/excel', [ResponseExportController::class, 'exportExcel'])->name('responses.export.excel');
-    Route::get('responses/import', [ResponseController::class, 'showImportForm'])->name('responses.import.form');
-    Route::post('responses/import', [ResponseController::class, 'importExcel'])->name('responses.import.excel');
+    
+    // Rute import respons sebelumnya (global)
+    // Route::get('responses/import', [ResponseController::class, 'showImportForm'])->name('responses.import.form');
+    // Route::post('responses/import', [ResponseController::class, 'importExcel'])->name('responses.import.excel');
+
+    // RUTE BARU UNTUK IMPORT RESPON BERDASARKAN FORM ID
+    Route::get('forms/{form}/responses/import', [ResponseController::class, 'showImportFormByForm'])->name('responses.import.form.by_form');
+    Route::post('forms/{form}/responses/import', [ResponseController::class, 'importExcelByForm'])->name('responses.import.excel.by_form');
 
 // **PROTECTED ROUTES (Hanya bisa diakses jika sudah login)**
 Route::middleware(['auth:admin'])->group(function () {

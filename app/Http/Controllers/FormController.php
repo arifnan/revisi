@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers; // Sesuaikan dengan namespace Anda
+namespace App\Http\Controllers;
 
 use App\Models\Form;
 use App\Models\Question;
@@ -44,18 +44,17 @@ class FormController extends Controller
 
     public function create()
     {
-        // Hanya guru yang login yang bisa membuat form dari sisi web
-        $teachers = []; // Default ke array kosong
         $authUser = Auth::user();
+        $teachers = []; 
 
         if ($authUser instanceof Teacher) {
              $teachers = Teacher::where('id', $authUser->id)->get();
-        } else if ($authUser && method_exists($authUser, 'isAdmin') && $authUser->isAdmin()) { // Contoh jika ada method isAdmin() di model User admin
-            // Untuk admin, mungkin tampilkan semua guru atau batasi
-            $teachers = Teacher::all();
+        } else if ($authUser && ($authUser instanceof \App\Models\Admin)) { // Periksa jika pengguna yang terautentikasi adalah Admin
+            $teachers = Teacher::all(); // Admin dapat menugaskan formulir ke guru mana pun
+        } else {
+            // Jika bukan Guru atau Admin, redirect atau tampilkan error
+            return redirect()->route('dashboard')->with('error', 'Anda tidak memiliki izin untuk membuat formulir.');
         }
-        // Jika tidak ada guru yang login atau bukan admin, $teachers akan kosong atau
-        // Anda bisa tambahkan logic untuk redirect atau error.
         return view('forms.create', compact('teachers'));
     }
 

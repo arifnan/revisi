@@ -46,12 +46,28 @@
             @endif
         </div>
         <div class="col-md-6">
-            <h3>Daftar Responden (Jumlah: {{ $responses->count() }})</h3>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3>Daftar Responden (Jumlah: {{ $responses->count() }})</h3>
+                <div class="d-flex gap-2">
+                    {{-- Tombol Tambah Respon (Sudah ada) --}}
+                    <a href="{{ route('responses.create', $form->id) }}" class="btn btn-success btn-sm">Tambah Respon</a>
+                    
+                    {{-- TOMBOL IMPORT BARU UNTUK HALAMAN INI --}}
+                    <a href="{{ route('responses.import.form.by_form', $form->id) }}" class="btn btn-info btn-sm">Import Jawaban</a>
+                </div>
+            </div>
+            @if (session('success'))
+                <div class="alert alert-success">{{ session('success') }}</div>
+            @endif
+            @if (session('error'))
+                <div class="alert alert-danger">{!! session('error') !!}</div>
+            @endif
+
             @if ($responses->isEmpty())
                 <p>Belum ada responden untuk formulir ini.</p>
             @else
                 <ul class="list-group">
-                    @foreach ($responses as $responseItem) {{-- Ubah nama variabel untuk menghindari konflik dengan $response utama --}}
+                    @foreach ($responses as $responseItem)
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             {{ $responseItem->student->name ?? 'Siswa Tidak Ditemukan' }} ({{ $responseItem->student->email ?? 'N/A' }})
                             <a href="{{ route('responses.show', $responseItem->id) }}" class="btn btn-sm btn-primary">Lihat Jawaban</a>

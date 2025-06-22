@@ -22,6 +22,9 @@ class ResponseController extends Controller
     /**
      * Menampilkan daftar ringkasan respons per formulir untuk tampilan web.
      * Mengubah 'Total Jawaban' menjadi 'Jumlah Responden'.
+    /**
+     * Menampilkan daftar ringkasan respons per formulir untuk tampilan web.
+     * Mengubah 'Total Jawaban' menjadi 'Jumlah Responden'.
      */
     public function index(Request $request)
     {
@@ -29,7 +32,7 @@ class ResponseController extends Controller
         $forms = Form::all();
 
         // Query dasar untuk responses: menghitung total responses per form_id
-        $query = Response::with('form', 'student')->select('form_id', DB::raw('count(*) as total_responses'))->groupBy('form_id');
+        $query = Response::with('form.teacher', 'student')->select('form_id', DB::raw('count(*) as total_responses'))->groupBy('form_id');
 
         // Filter berdasarkan form_id jika ada di request
         if ($request->filled('form_id')) {
@@ -43,68 +46,91 @@ class ResponseController extends Controller
 
     /**
      * Menampilkan daftar responden dan jawaban untuk sebuah formulir tertentu.
-     * Ini adalah target dari tombol "Lihat Detail" di halaman index respons.
      */
     public function showResponsesByForm(Form $form)
     {
-        // Ambil semua pertanyaan untuk formulir ini
         $questions = $form->questions()->orderBy('id')->get(); 
-
-        // Ambil semua respons untuk formulir ini, dengan data siswa (responden)
         $responses = $form->responses()->with('student')->latest()->get();
 
-        // Pastikan $questions diteruskan ke view
         return view('responses.detail_by_form', compact('form', 'questions', 'responses'));
     }
 
     /**
      * Menampilkan detail spesifik dari sebuah respons individual untuk tampilan web.
-     * Ini digunakan jika ada rute 'responses.show' yang mengarah ke detail 1 respon.
      */
     public function showResponseDetail(Response $response)
     {
-        // Eager load semua relasi yang dibutuhkan untuk tampilan detail
         $response->load(['student', 'form.teacher', 'responseAnswers.question']); 
         return view('responses.show', compact('response'));
     }
 
-    public function showImportForm()
+    /**
+     * Menampilkan formulir untuk menambahkan respons baru.
+     */
+    public function createResponse(Form $form)
     {
-        return view('responses.import');
+        $questions = $form->questions()->with('options')->get();
+        $students = Student::all();
+
+        return view('responses.create', compact('form', 'questions', 'students'));
     }
 
-    // Method untuk mengelola upload file Excel responden
-    public function importExcel(Request $request)
+    /**
+     * Menyimpan respons baru yang dibuat melalui panel admin/web.
+     */
+    public function storeResponse(Request $request)
     {
-        $request->validate([
-            'file' => 'required|mimes:xlsx,xls,csv',
+        $validatedData = $request->validate([
+            'form_id' => 'required|exists:forms,id',
+            'student_id' => 'required|exists:students,id',
+            'photo' => 'nullable|image|mimes:jpeg,png,jpg|max:4096',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
+            'answers' => 'required|array',
+            'answers.*.question_id' => 'required|exists:questions,id',
+            'answers.*.answer_text' => 'nullable|string',
+            'answers.*.option_id' => 'nullable|exists:question_options,id',
+            'answers.*.file_upload' => 'nullable|file|max:4096|mimes:pdf,doc,docx,jpg,jpeg,png',
         ]);
-
-        try {
-            $import = new ResponsesImport;
-            Excel::import($import, $request->file('file'));
-
-            $errors = $import->getErrors();
-            if (!empty($errors)) {
-                $errorMessages = [];
-                foreach ($errors as $failure) {
-                    $fieldAttribute = $failure->attribute() ? " (Field: {$failure->attribute()})" : '';
-                    $errorMessages[] = "Baris {$failure->row()}: " . implode(', ', $failure->errors()) . $fieldAttribute;
-                }
-                return redirect()->back()->with('error', 'Beberapa data gagal diimpor:<br>' . implode('<br>', $errorMessages));
-            }
-
-            return redirect()->route('responses.index')->with('success', 'Data responden dan jawaban berhasil diimpor!');
-        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
-            $failures = $e->failures();
-            $errorMessages = []; 
-            foreach ($failures as $failure) {
-                $errorMessages[] = 'Baris ' . $failure->row() . ': ' . implode(', ', $failure->errors());
-            }
-            return redirect()->back()->with('error', 'Gagal mengimpor data:<br>' . implode('<br>', $errorMessages));
-        } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Terjadi kesalahan saat mengimpor data: ' . $e->getMessage());
+    
+        $photoPath = null;
+        if ($request->hasFile('photo')) {
+            $photoPath = $request->file('photo')->store('response_photos', 'public');
         }
+    
+        $response = Response::create([
+            'form_id' => $validatedData['form_id'],
+            'student_id' => $validatedData['student_id'],
+            'photo_path' => $photoPath,
+            'latitude' => $validatedData['latitude'],
+            'longitude' => $validatedData['longitude'],
+            'is_location_valid' => ($validatedData['latitude'] !== null && $validatedData['longitude'] !== null),
+            'submitted_at' => now(),
+        ]);
+    
+        foreach ($validatedData['answers'] as $answerData) {
+            $answerText = $answerData['answer_text'] ?? null;
+            $optionId = $answerData['option_id'] ?? null;
+            $fileUrl = null;
+    
+            $question = Question::find($answerData['question_id']);
+            if ($question && $question->question_type === 'file_upload' && isset($answerData['file_upload'])) {
+                $fileUrl = $answerData['file_upload']->store('response_files', 'public');
+                $answerText = $answerData['file_upload']->getClientOriginalName();
+            } else if (is_array($answerText)) { // For checkbox, combine to string
+                $answerText = implode(', ', $answerText);
+            }
+    
+            ResponseAnswer::create([
+                'response_id' => $response->id,
+                'question_id' => $answerData['question_id'],
+                'answer_text' => $answerText,
+                'option_id' => $optionId,
+                'file_url' => $fileUrl,
+            ]);
+        }
+    
+        return redirect()->route('responses.detail_by_form', $validatedData['form_id'])->with('success', 'Respon berhasil ditambahkan.');
     }
 
     /**
@@ -114,6 +140,57 @@ class ResponseController extends Controller
     {
         $response->delete();
         return redirect()->route('responses.index')->with('success', 'Response deleted.');
+    }
+
+
+    // --- IMPORT RESPONS BARU BERDASARKAN FORM ---
+
+    /**
+     * Menampilkan formulir untuk mengunggah file impor respons untuk form tertentu.
+     */
+    public function showImportFormByForm(Form $form)
+    {
+        return view('responses.import', compact('form'));
+    }
+
+    /**
+     * Mengelola upload file Excel untuk impor respons untuk form tertentu.
+     */
+    public function importExcelByForm(Request $request, Form $form)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv',
+        ]);
+
+        try {
+            // Meneruskan form ID ke import class untuk validasi pertanyaan
+            $import = new ResponsesImport($form->id); 
+            Excel::import($import, $request->file('file'));
+
+            $errors = $import->getErrors(); 
+            if (!empty($errors)) {
+                $errorMessages = [];
+                foreach ($errors as $failure) {
+                    $rowInfo = $failure->row() ? "Baris " . $failure->row() . ": " : "";
+                    $attributeInfo = $failure->attribute() ? " (Kolom: " . $failure->attribute() . ")" : "";
+                    $errorMessages[] = $rowInfo . implode(', ', $failure->errors()) . $attributeInfo;
+                }
+                return redirect()->back()->with('error', 'Beberapa data gagal diimpor:<br>' . implode('<br>', $errorMessages));
+            }
+
+            return redirect()->route('responses.detail_by_form', $form->id)->with('success', 'Data responden dan jawaban berhasil diimpor!');
+        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+            $failures = $e->failures();
+            $errorMessages = []; 
+            foreach ($failures as $failure) {
+                $rowInfo = $failure->row() ? "Baris " . $failure->row() . ": " : "";
+                $attributeInfo = $failure->attribute() ? " (Kolom: " . $failure->attribute() . ")" : "";
+                $errorMessages[] = $rowInfo . implode(', ', $failure->errors()) . $attributeInfo;
+            }
+            return redirect()->back()->with('error', 'Gagal mengimpor data:<br>' . implode('<br>', $errorMessages));
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Terjadi kesalahan saat mengimpor data: ' . $e->getMessage());
+        }
     }
 
     // --- API Methods ---
