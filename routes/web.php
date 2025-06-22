@@ -32,7 +32,7 @@ Route::get('/admins', [AdminController::class, 'index']); // Menampilkan daftar 
 
     // **CRUD Formulir**
     Route::resource('forms', FormController::class);
-
+    
     // **CRUD Pertanyaan dalam Formulir**
     Route::resource('questions', QuestionController::class);
 

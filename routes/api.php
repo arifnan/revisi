@@ -18,7 +18,7 @@ Route::get('/admins', [AdminController::class, 'apiIndex']);
 // });
 Route::post('/register/teacher', [AuthController::class, 'registerTeacher']);
 Route::post('/register/student', [AuthController::class, 'registerStudent']);
-Route::post('/login', [AuthController::class, 'loginUser']); // Tambahkan ini jika belum ada
+Route::post('/login', [AuthController::class, 'login']); // Tambahkan ini jika belum ada
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logoutUser']); // Tambahkan ini

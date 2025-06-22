@@ -26,6 +26,20 @@ return [
             'provider' => null,
         ],
         // --------------------------------------------------------------------
+
+        // ---- TAMBAHKAN GUARD UNTUK TEACHER API MENGGUNAKAN SANCTUM ----
+        'teacher' => [
+            'driver' => 'session',//an driver 'sanctum' untuk API token
+            'provider' => 'teachers', // Menunjuk ke provider 'teachers' yang sudah didefinisikan
+        ],
+        // --------------------------------------------------------------------
+
+        // ---- TAMBAHKAN GUARD UNTUK STUDENT API MENGGUNAKAN SANCTUM ----
+        'student' => [
+            'driver' => 'session',//an driver 'sanctum' untuk API token
+            'provider' => 'students', // Menunjuk ke provider 'students' yang sudah didefinisikan
+        ],
+        // --------------------------------------------------------------------
     ],
 
     'providers' => [

@@ -1,0 +1,109 @@
+/* Sidebar container */
+#sidebar {
+    width: 250px;
+    background-color: #3D1860;
+    transition: width 0.3s ease;
+    color: white;
+    z-index: 1000;
+}
+
+/* Saat collapsed */
+body.sidebar-collapsed #sidebar {
+    width: 60px;
+    overflow-x: hidden;
+}
+
+/* Sembunyikan elemen tertentu saat collapsed */
+body.sidebar-collapsed #sidebar-logo {
+    display: none;
+}
+
+body.sidebar-collapsed .nav-link span {
+    display: none;
+}
+
+body.sidebar-collapsed .nav-link i {
+    margin-right: 0;
+    width: 100%;
+    text-align: center;
+}
+
+body.sidebar-collapsed #logout-container {
+    display: none;
+}
+
+body.sidebar-collapsed #nav-menu {
+    display: none;
+}
+
+/* Konten utama mengikuti lebar sidebar */
+#main-content {
+    margin-left: 250px;
+    width: calc(100% - 250px);
+    transition: margin-left 0.3s ease, width 0.3s ease;
+    overflow-x: auto;
+}
+
+/* Saat sidebar collapsed */
+body.sidebar-collapsed #main-content {
+    margin-left: 60px;
+    width: calc(100% - 60px);
+}
+
+/* Tabel responsif */
+.table {
+    min-width: 600px;
+}
+
+.table th,
+.table td {
+    vertical-align: middle;
+}
+
+.card-header {
+    font-size: 1.1rem;
+}
+
+.btn-sm i {
+    vertical-align: middle;
+}
+
+.table-hover tbody tr:hover {
+    background-color: #f1f1f1;
+}
+
+.btn-warning, .btn-danger {
+    transition: 0.2s ease-in-out;
+}
+
+.btn-warning:hover {
+    background-color: #d39e00;
+    border-color: #c69500;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+    border-color: #bd2130;
+}
+
+.custom-form-table th,
+.custom-form-table td {
+    vertical-align: middle;
+}
+
+.custom-form-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.custom-form-table td .btn {
+    transition: all 0.2s ease-in-out;
+}
+
+.custom-form-table td .btn:hover {
+    opacity: 0.85;
+}
+
+.custom-form-table thead {
+    background-color: #643579 !important;
+    color: white !important;
+}

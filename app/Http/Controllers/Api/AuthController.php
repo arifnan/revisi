@@ -51,7 +51,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Registrasi guru berhasil',
-            'user' => new UserResource($teacher->fresh()),
+            'user' => new UserResource($teacher->fresh()->load('notifications', 'favorites')), // Relasi 'favorites'
             'token' => $token,
             'role' => 'teacher'
         ], 201);
@@ -92,7 +92,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Registrasi siswa berhasil',
-            'user' => new UserResource($student->fresh()),
+            'user' => new UserResource($student->fresh()->load('notifications', 'favorites')), // Relasi 'favorites'
             'token' => $token,
             'role' => 'student'
         ], 201);
@@ -100,51 +100,45 @@ class AuthController extends Controller
 
     /**
      * Login untuk Guru atau Siswa via API.
-     * Method loginUser Anda sudah cukup baik dalam membedakan peran berdasarkan input 'role'
-     * dan kemudian mencari di tabel yang sesuai. Tidak perlu diubah untuk masalah ini.
      */
-    public function loginUser(Request $request)
+    public function login(Request $request)
     {
-        // Versi yang sudah Anda berikan sebelumnya sudah memvalidasi role,
-        // dan akan gagal jika role yang di-login tidak cocok dengan kredensial di tabel yang sesuai.
-        // Pesan "Akun ini bukan akun siswa. Silakan login sebagai guru." berasal dari logic di Android
-        // setelah API mengembalikan data user yang ternyata role-nya tidak sesuai dengan layar login saat ini.
-        // Dengan validasi email unik lintas tabel saat registrasi, kasus ini seharusnya tidak terjadi lagi.
-
-        $request->validate([
-            'email' => 'required|string', // Di Android, ini dikirim sebagai NIP atau Email untuk Guru
+        $validatedData = $request->validate([
+            'email' => 'required|string|email',
             'password' => 'required|string',
-            'role' => ['required', 'string', Rule::in(['teacher', 'student'])]
+            // Field 'role' dihapus dari validasi karena akan dideteksi secara otomatis
         ]);
 
-        $credentials = $request->only('email', 'password');
-        $role = $request->input('role');
-        $user = null;
-        $guard = ''; // Tidak terpakai di sini, tapi ok
+        $email = $validatedData['email'];
+        $password = $validatedData['password'];
 
-        if ($role === 'teacher') {
-            // Untuk guru, 'email' dari request bisa jadi NIP atau Email
-            $user = Teacher::where('email', $credentials['email'])
-                            ->orWhere('nip', $credentials['email']) // Tambahkan pengecekan NIP
-                            ->first();
-        } elseif ($role === 'student') {
-            $user = Student::where('email', $credentials['email'])->first();
+        $user = null;
+        $guard = null;
+
+        // Coba autentikasi sebagai Siswa
+        if (Auth::guard('student')->attempt(['email' => $email, 'password' => $password])) {
+            $user = Auth::guard('student')->user();
+            $guard = 'student';
+        }
+        // Jika bukan siswa, coba autentikasi sebagai Guru
+        else if (Auth::guard('teacher')->attempt(['email' => $email, 'password' => $password])) {
+            $user = Auth::guard('teacher')->user();
+            $guard = 'teacher';
         }
 
-        if (!$user || !Hash::check($credentials['password'], $user->password)) {
-            throw ValidationException::withMessages([
-                'email' => ['Kredensial yang diberikan tidak cocok dengan catatan kami.'], // Pesan error generik lebih baik
+        if ($user) {
+            // Pastikan Teacher dan Student models menggunakan trait HasApiTokens
+            $token = $user->createToken('authToken')->plainTextToken;
+            return response()->json([
+                'message' => 'Login Berhasil!',
+                'token' => $token,
+                // Menggunakan 'favorites' yang benar
+                'user' => new UserResource($user->load('notifications', 'favorites')) 
             ]);
         }
 
-        $user->tokens()->delete();
-        $token = $user->createToken('api_token_' . ($user instanceof Teacher ? 'guru' : 'siswa') , [$role])->plainTextToken;
-
-        return response()->json([
-            'message' => 'Login berhasil',
-            'user' => new UserResource($user->fresh()->load('notifications', 'favorites')),
-            'token' => $token,
-            'role' => $role // Kirim role yang digunakan untuk login
+        throw ValidationException::withMessages([
+            'email' => ['Kredensial yang diberikan tidak cocok dengan catatan kami.'],
         ]);
     }
 
@@ -203,8 +197,8 @@ class AuthController extends Controller
         } elseif ($user instanceof Teacher) {
             $specificRules['subject'] = ['sometimes', 'string', 'max:255'];
              // Guru mungkin juga bisa update NIP atau email, tapi perlu hati-hati dengan unique constraint
-            // 'nip' => ['sometimes', 'string', 'max:255', Rule::unique('teachers','nip')->ignore($user->id)],
-            // 'email' => ['sometimes', 'string', 'email', 'max:255', Rule::unique('teachers','email')->ignore($user->id), Rule::unique('students','email')],
+             // 'nip' => ['sometimes', 'string', 'max:255', Rule::unique('teachers','nip')->ignore($user->id)],
+             // 'email' => ['sometimes', 'string', 'email', 'max:255', Rule::unique('teachers','email')->ignore($user->id), Rule::unique('students','email')],
         }
 
         $validatedData = $request->validate(array_merge($baseRules, $specificRules));
@@ -239,7 +233,8 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Profil berhasil diperbarui.',
-            'user' => new UserResource($user->fresh()->load('notifications', 'favoriteForms'))
+            // Menggunakan 'favorites' yang benar
+            'user' => new UserResource($user->fresh()->load('notifications', 'favorites')) 
         ]);
     }
 }
