@@ -49,6 +49,9 @@
         <div class="card-header">
             <h4>Daftar Jawaban</h4>
         </div>
+        <a href="{{ route('responses.edit', $response->id) }}" class="btn btn-warning mb-3">
+          <i class="bi bi-pencil-square"></i> Edit Foto & Lokasi
+        </a>
         <ul class="list-group list-group-flush">
             @forelse ($response->responseAnswers as $answer)
                 <li class="list-group-item">

@@ -37,7 +37,7 @@ Route::get('/admins', [AdminController::class, 'index']); // Menampilkan daftar 
     Route::resource('questions', QuestionController::class);
 
     // **Lihat Jawaban User**
-    Route::resource('responses', ResponseController::class)->except(['show']);
+    Route::resource('responses', ResponseController::class);
     Route::get('/responses/form/{form}', [ResponseController::class, 'showResponsesByForm'])->name('responses.detail_by_form');
     Route::get('/responses/{response}', [ResponseController::class, 'showResponseDetail'])->name('responses.show');
     Route::get('/responses/create/{form}', [ResponseController::class, 'createResponse'])->name('responses.create');
@@ -65,6 +65,8 @@ Route::get('/admins', [AdminController::class, 'index']); // Menampilkan daftar 
     Route::get('forms/{form}/responses/import', [ResponseController::class, 'showImportFormByForm'])->name('responses.import.form.by_form');
     Route::post('forms/{form}/responses/import', [ResponseController::class, 'importExcelByForm'])->name('responses.import.excel.by_form');
 
+
+    
 // **PROTECTED ROUTES (Hanya bisa diakses jika sudah login)**
 Route::middleware(['auth:admin'])->group(function () {
 
