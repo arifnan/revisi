@@ -91,7 +91,7 @@
                             <td class="text-center fw-semibold text-primary">{{ $form->form_code }}</td>
                             <td class="text-center">{{ $form->responses_count }}</td>
                             <td class="text-center">
-                                <a href="{{ route('responses.show', $form->id)  }}" class="btn btn-info btn-sm me-1">
+                                <a href="{{ route('responses.detail_by_form', $form->id) }}" class="btn btn-info btn-sm me-1">
                                     <i class="bi bi-eye"></i>
                                 </a>
                                 <a href="{{ route('forms.edit', $form->id) }}" class="btn btn-warning btn-sm me-1">

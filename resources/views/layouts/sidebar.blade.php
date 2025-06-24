@@ -61,6 +61,12 @@
         </a>
         <hr class="my-1 border-light">
     </li>
+    <li class="nav-item mb-3">
+        <a href="{{ route('locations.index') }}" class="nav-link text-white d-flex align-items-center">
+            <i class="bi bi-geo-alt-fill me-2"></i><span>Kelola Lokasi</span>
+        </a>
+        <hr class="my-1 border-light">
+    </li>
 </ul>
 
     <!-- Logout -->
