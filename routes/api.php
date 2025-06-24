@@ -60,5 +60,7 @@ Route::middleware('auth:sanctum')->group(function () {
   	Route::get('/forms/code/{form_code}', [FormController::class, 'apiGetByFormCode']);
   
     //rute lokasi
-    Route::get('/locations', [LocationController::class, 'index']);
+    Route::get('/locations', [LocationController::class, 'index']); // Rute lama untuk mengambil semua lokasi
+    Route::post('/locations/validate', [LocationController::class, 'validateLocation']); // <-- RUTE BARU DITAMBAHKAN
+    Route::post('/verify-location', [LocationController::class, 'validateLocation']); 
 });
