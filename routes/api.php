@@ -8,6 +8,7 @@ use App\Http\Controllers\FormController;
 use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\ResponseController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\Api\FavoriteFormController;
 
@@ -58,4 +59,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/forms/{form}/favorite', [FavoriteFormController::class, 'destroy']);
   	Route::get('/forms/code/{form_code}', [FormController::class, 'apiGetByFormCode']);
   
+    //rute lokasi
+    Route::get('/locations', [LocationController::class, 'index']);
 });
