@@ -47,7 +47,10 @@ class Response extends Model
     
     public function answers(): HasMany
     {
-        return $this->hasMany(ResponseAnswer::class);
+        return $this->hasMany(ResponseAnswer::class)
+                    ->join('questions', 'response_answers.question_id', '=', 'questions.id')
+                    ->orderBy('questions.id', 'asc')
+                    ->select('response_answers.*');
     }
 
     public function student(): BelongsTo
@@ -61,10 +64,5 @@ class Response extends Model
             return Storage::disk('public')->url($this->photo_path);
         }
         return null;
-    }
-
-        public function responseAnswers()
-    {
-        return $this->hasMany(ResponseAnswer::class); // <--- PASTIKAN INI ADA DI Response.php
     }
 }

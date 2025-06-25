@@ -201,7 +201,7 @@ class ResponseController extends Controller
             return response()->json(['message' => 'Akses ditolak.'], 403);
         }
 
-        $response->load(['student', 'form.teacher', 'responseAnswers.question']);
+        $response->load(['student', 'form.teacher', 'answers.question']);
         return new FormResponseResource($response);
     }
 
