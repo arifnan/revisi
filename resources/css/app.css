@@ -1,46 +1,102 @@
-
-/* resources/css/app.css atau file CSS kustom Anda */
-
-/* Pastikan ini dimuat setelah Bootstrap jika Anda menggunakan Bootstrap */
-
-/* Gaya untuk tabel kustom */
-.custom-form-table {
-    border-collapse: collapse; /* Hilangkan spasi antar sel */
-    width: 100%;
+body {
+    background: linear-gradient(to right, #3D1860, #5B2A89); /* Menggunakan warna dominan dan sekunder */
+    height: 100vh;
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.custom-form-table th,
-.custom-form-table td {
-    border: 1px solid #0056ad; /* Border tipis untuk sel */
-    padding: 0.75rem; /* Padding standar Bootstrap */
-    text-align: left;
-    vertical-align: middle; /* Pusatkan vertikal */
-    white-space: nowrap; /* Mencegah teks di header/aksi tergulung ke baris baru */
+.auth-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0px 8px 25px rgba(0, 0, 0, 0.15);
+    display: flex;
+    overflow: hidden;
+    width: 850px;
+    max-width: 100%;
+    animation: slideIn 0.6s ease-out;
 }
 
-.custom-form-table th {
-    background-color: #002040; /* Latar belakang header lebih terang */
+.auth-left {
+    flex: 1;
+    background: #3D1860; /* Menggunakan warna dominan */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+}
+
+.auth-left .logo-img {
+    max-width: 100%;
+    max-height: 300px;
+}
+
+.auth-right {
+    flex: 1;
+    padding: 50px 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+h2.text-center {
+    color: #3D1860; /* Menggunakan warna dominan */
+    font-weight: 600;
+}
+
+.form-control {
+    border-radius: 30px;
+    padding: 12px 20px;
+    border: 1px solid #ccc;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: #3D1860; /* Menggunakan warna dominan */
+    box-shadow: 0 0 5px rgba(61, 24, 96, 0.5);
+}
+
+.btn-primary {
+    border-radius: 30px;
+    padding: 12px;
+    background-color: #3D1860; /* Menggunakan warna dominan */
+    border: none;
     font-weight: bold;
-    color: #495057; /* Warna teks header */
+    transition: background 0.3s ease;
 }
 
-/* Warna latar belakang selang-seling */
-.custom-form-table tbody tr:nth-child(odd) {
-    background-color: #f2f2f2; /* Warna terang untuk baris ganjil */
+.btn-primary:hover {
+    background-color: #5B2A89; /* Menggunakan warna sekunder untuk hover */
 }
 
-.custom-form-table tbody tr:nth-child(even) {
-    background-color: #ffffff; /* Warna putih untuk baris genap */
+.alert-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 15px;
 }
 
-/* Efek hover pada baris */
-.custom-form-table tbody tr:hover {
-    background-color: #041e38; /* Warna saat hover */
+.text-center a {
+    text-decoration: none;
+    color: #3D1860; /* Menggunakan warna dominan */
+    font-weight: 500;
 }
 
-/* Penyesuaian untuk kolom Aksi agar tombol tetap sebaris */
-.custom-form-table td.d-flex.gap-1 {
-    /* Atur lebar minimum agar tombol tidak terlalu sempit, sesuaikan jika perlu */
-    min-width: 180px; /* Sesuaikan lebar ini berdasarkan jumlah tombol dan teks */
-    flex-wrap: nowrap; /* Pastikan tombol tidak wrap jika ada ruang */
+.text-center a:hover {
+    text-decoration: underline;
+}
+
+/* Animasi masuk */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }

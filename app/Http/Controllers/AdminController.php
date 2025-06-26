@@ -11,12 +11,7 @@ use Illuminate\Support\Facades\Hash;
 class AdminController extends Controller
 {
     public function index() {
-        $admins = Admin::all();
-        // return response()->json([
-        //     'status'=>true,
-        //     'message'=>'data ditemukan',
-        //      'data'=>$admins
-        // ],200);
+        $admins = Admin::paginate(10); // Misalnya 10 item per halaman
         return view('admin.index', compact('admins'));
     }
     public function apiIndex()

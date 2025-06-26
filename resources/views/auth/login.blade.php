@@ -33,7 +33,4 @@
     <button type="submit" class="btn btn-primary w-100">LOGIN</button>
 </form>
 
-<div class="text-center mt-3">
-    <a href="{{ route('register') }}">Create an account</a>
-</div>
 @endsection

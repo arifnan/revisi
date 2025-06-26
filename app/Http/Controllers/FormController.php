@@ -10,36 +10,34 @@ use Illuminate\Support\Str; // Diperlukan untuk Str::random
 use App\Http\Resources\FormResource;
 use Illuminate\Support\Facades\Auth; // Untuk mendapatkan user yang terautentikasi
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB; 
 
 class FormController extends Controller
 {
     // Metode untuk Web (blade views)
-    public function index(Request $request) // Tambahkan Request $request
+       public function index(Request $request)
     {
         $user = Auth::user();
-        $formsQuery = Form::query(); // Mulai dengan query builder
+        $formsQuery = Form::query();
 
         if ($user && $user instanceof Teacher) {
             $formsQuery->where('teacher_id', $user->id);
-            $teachers = Teacher::where('id', $user->id)->get(); // Hanya guru yang login
+            $teachers = Teacher::where('id', $user->id)->get();
         } else {
-            // Jika admin atau peran lain yang bisa melihat semua form
-            $teachers = Teacher::all(); // Untuk admin, tampilkan semua guru untuk filter
+            $teachers = Teacher::all();
         }
-        
-        // Eager load teacher dan hitung jumlah responses
-        // Pindahkan withCount('responses') ke query builder
-        $formsQuery->with('teacher')->withCount('responses')->latest(); 
 
-        // Filter formulir berdasarkan teacher_id jika ada dalam request
+        $formsQuery->with('teacher')->withCount('responses')->latest();
+
         if ($request->has('teacher_id') && $request->teacher_id !== '') {
-            $formsQuery->where('teacher_id', $request->teacher_id); // Terapkan filter pada query builder
+            $formsQuery->where('teacher_id', $request->teacher_id);
         }
 
-        $forms = $formsQuery->get(); // Eksekusi query untuk mendapatkan formulir
+        $forms = $formsQuery->paginate(10); // Misalnya 10 item per halaman
 
-        return view('forms.index', compact('forms', 'teachers')); // Tambahkan 'teachers' di compact
+        return view('forms.index', compact('forms', 'teachers'));
     }
+    
 
 
     public function create()

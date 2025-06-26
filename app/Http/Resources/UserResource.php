@@ -70,8 +70,8 @@ class UserResource extends JsonResource
             'updated_at' => $this->updated_at ? $this->updated_at->toIso8601String() : null,
 
             // Contoh memuat relasi jika sudah di-load di controller:
-            // 'notifications' => NotificationResource::collection($this->whenLoaded('notifications')),
-            // 'favorite_forms' => FormResource::collection($this->whenLoaded('favoriteForms')),
+            'notifications' => NotificationResource::collection($this->whenLoaded('notifications')),
+            'favorite_forms' => FormResource::collection($this->whenLoaded('favoriteForms')),
             // 'forms_created' => $this->when($this->resource instanceof Teacher, FormResource::collection($this->whenLoaded('forms'))),
             // 'form_responses' => $this->when($this->resource instanceof Student, FormResponseResource::collection($this->whenLoaded('responses'))),
         ];

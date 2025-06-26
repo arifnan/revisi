@@ -1,7 +1,5 @@
 @extends('layouts.app')
 
-@section('title', 'Kelola Admin')
-
 @section('content')
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -15,43 +13,43 @@
         <div class="card-header bg-primary text-white fw-semibold">
             <i class="bi bi-people-fill me-2"></i> Daftar Admin
         </div>
-        <div class="card-body p-0">
+        <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light text-center align-middle">
+                <table class="table table-hover" id="dataTable">
+                    <thead>
                         <tr>
-                            <th style="width: 5%;">#</th>
-                            <th style="width: 30%;">Nama</th>
-                            <th style="width: 35%;">Email</th>
-                            <th style="width: 30%;">Aksi</th>
+                            <th>No</th>
+                            <th>Nama</th>
+                            <th>Email</th>
+                            <th>Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($admins as $index => $admin)
+                        @foreach ($admins as $index => $admin)
                         <tr>
-                            <td class="text-center">{{ $index + 1 }}</td>
+                            <td>{{ $index + 1 }}</td>
                             <td>{{ $admin->name }}</td>
                             <td>{{ $admin->email }}</td>
-                            <td class="text-center">
-                                <a href="{{ route('admin.edit', $admin->id) }}" class="btn btn-warning btn-sm me-1" title="Edit">
-                                <i class="bi bi-pencil-fill"></i>
-                            </a>
-                            <form action="{{ route('admin.destroy', $admin->id) }}" method="POST" class="d-inline" onsubmit="return confirmDelete(this)">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-danger btn-sm" title="Hapus">
-                                    <i class="bi bi-trash-fill"></i>
-                                </button>
-                            </form>
+                            <td>
+                                <a href="{{ route('admin.edit', $admin->id) }}" class="btn btn-sm btn-warning">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                                <form action="{{ route('admin.destroy', $admin->id) }}" method="POST" class="d-inline">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Apakah Anda yakin?')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
                             </td>
                         </tr>
-                        @empty
-                        <tr>
-                            <td colspan="4" class="text-center text-muted py-4">Belum ada admin yang terdaftar.</td>
-                        </tr>
-                        @endforelse
+                        @endforeach
                     </tbody>
                 </table>
+            </div>
+            <!-- Pagination -->
+            <div class="d-flex justify-content-center mt-4">
+                {{ $admins->links('pagination::bootstrap-5') }}
             </div>
         </div>
     </div>

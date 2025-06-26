@@ -1,66 +1,59 @@
 @extends('layouts.app')
 
-@section('title', 'Daftar Guru')
-
 @section('content')
-<div class="container mt-4">
-    <h2>Daftar Guru</h2>
-    <a href="{{ route('teachers.create') }}" class="btn btn-primary mb-3">Tambah Guru</a>
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="fw-bold text-dark">Kelola Guru</h1>
+        <a href="{{ route('teachers.create') }}" class="btn btn-primary shadow-sm">
+            <i class="bi bi-plus-circle me-1"></i> Tambah Guru
+        </a>
+    </div>
 
-    <!-- Form Pencarian -->
-    <form method="GET" action="{{ route('teachers.index') }}" class="mb-3">
-        <div class="row">
-            <div class="col-md-4">
-                <select name="gender" class="form-control">
-                    <option value="">Pilih Gender</option>
-                    <option value="1" {{ request('gender') == '1' ? 'selected' : '' }}>Laki-Laki</option>
-                    <option value="0" {{ request('gender') == '0' ? 'selected' : '' }}>Perempuan</option>
-                </select>
+    <div class="card shadow border-0">
+        <div class="card-header bg-primary text-white fw-semibold">
+            <i class="bi bi-person-video3 me-2"></i> Daftar Guru
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover" id="dataTable">
+                    <thead>
+                        <tr>
+                            <th>No</th>
+                            <th>Nama</th>
+                            <th>Email</th>
+                            <th>Mata Pelajaran</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($teachers as $index => $teacher)
+                        <tr>
+                            <td>{{ $index + 1 }}</td>
+                            <td>{{ $teacher->name }}</td>
+                            <td>{{ $teacher->email }}</td>
+                            <td>{{ $teacher->subject }}</td>
+                            <td>
+                                <a href="{{ route('teachers.edit', $teacher->id) }}" class="btn btn-sm btn-warning">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                                <form action="{{ route('teachers.destroy', $teacher->id) }}" method="POST" class="d-inline">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Apakah Anda yakin?')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
-            <div class="col-md-4">
-                <input type="text" name="subject" class="form-control" placeholder="Cari Mata Pelajaran" value="{{ request('subject') }}">
-            </div>
-            <div class="col-md-4">
-                <button type="submit" class="btn btn-success">Cari</button>
-                <a href="{{ route('teachers.index') }}" class="btn btn-secondary">Reset</a>
+            <!-- Pagination -->
+            <div class="d-flex justify-content-center mt-4">
+                {{ $teachers->links('pagination::bootstrap-5') }}
             </div>
         </div>
-    </form>
-
-    <table class="table table-bordered">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>NIP</th>
-                <th>Nama</th>
-                <th>Jenis Kelamin</th>
-                <th>Email</th>
-                <th>Mata Pelajaran</th>
-                <th>Alamat</th>
-                <th>Aksi</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($teachers as $teacher)
-            <tr>
-                <td>{{ $loop->iteration }}</td>
-                <td>{{ $teacher->nip }}</td>
-                <td>{{ $teacher->name }}</td>
-                <td>{{ $teacher->gender ? 'Laki-Laki' : 'Perempuan' }}</td>
-                <td>{{ $teacher->email }}</td>
-                <td>{{ $teacher->subject }}</td>
-                <td>{{ $teacher->address }}</td>
-                <td>
-                    <a href="{{ route('teachers.edit', $teacher->id) }}" class="btn btn-warning btn-sm">Edit</a>
-                    <form action="{{ route('teachers.destroy', $teacher->id) }}" method="POST" class="d-inline">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Yakin ingin menghapus?')">Hapus</button>
-                    </form>
-                </td>
-            </tr>
-            @endforeach
-        </tbody>
-    </table>
+    </div>
 </div>
 @endsection

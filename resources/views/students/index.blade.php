@@ -1,71 +1,59 @@
 @extends('layouts.app')
 
-@section('title', 'Daftar Siswa')
-
 @section('content')
-<div class="container mt-4">
-    <h2>Daftar Siswa</h2>
-    <div class="mb-3">
-        <a href="{{ route('students.create') }}" class="btn btn-primary">Tambah Siswa</a>
-        <a href="{{ route('students.import.form') }}" class="btn btn-success">Import dari Excel</a>
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="fw-bold text-dark">Daftar Siswa</h1>
+        <a href="{{ route('students.create') }}" class="btn btn-primary shadow-sm">
+            <i class="bi bi-plus-circle me-1"></i> Tambah Siswa
+        </a>
     </div>
 
-    <form method="GET" action="{{ route('students.index') }}" class="mb-3">
-        <div class="row">
-            <div class="col-md-4">
-                <select name="gender" class="form-control">
-                    <option value="">Pilih Gender</option>
-                    <option value="1" {{ request('gender') == '1' ? 'selected' : '' }}>Laki-Laki</option>
-                    <option value="0" {{ request('gender') == '0' ? 'selected' : '' }}>Perempuan</option>
-                </select>
+    <div class="card shadow border-0">
+        <div class="card-header bg-primary text-white fw-semibold">
+            <i class="bi bi-people-fill me-2"></i> Data Siswa
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>No</th>
+                            <th>Nama</th>
+                            <th>Kelas</th>
+                            <th>Jenis Kelamin</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($students as $index => $student)
+                        <tr>
+                            <td>{{ $index + 1 }}</td>
+                            <td>{{ $student->name }}</td>
+                            <td>{{ $student->grade }}</td>
+                            <td>{{ $student->gender == 1 ? 'Laki-laki' : 'Perempuan' }}</td>
+                            <td>
+                                <a href="{{ route('students.edit', $student->id) }}" class="btn btn-sm btn-warning">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                                <form action="{{ route('students.destroy', $student->id) }}" method="POST" class="d-inline">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Yakin ingin menghapus?')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
-            <div class="col-md-4">
-                <select name="grade" class="form-control">
-                    <option value="">Pilih Kelas</option>
-                    <option value="10" {{ request('grade') == '10' ? 'selected' : '' }}>10</option>
-                    <option value="11" {{ request('grade') == '11' ? 'selected' : '' }}>11</option>
-                    <option value="12" {{ request('grade') == '12' ? 'selected' : '' }}>12</option>
-                </select>
-            </div>
-            <div class="col-md-4">
-                <button type="submit" class="btn btn-success">Cari</button>
-                <a href="{{ route('students.index') }}" class="btn btn-secondary">Reset</a>
+            <!-- Pagination -->
+            <div class="d-flex justify-content-center mt-4">
+                {{ $students->links('pagination::bootstrap-5') }}
             </div>
         </div>
-    </form>
-
-    <table class="table table-bordered">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>Nama</th>
-                <th>Jenis Kelamin</th>
-                <th>Email</th>
-                <th>Kelas</th>
-                <th>Alamat</th>
-                <th>Aksi</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($students as $student)
-            <tr>
-                <td>{{ $loop->iteration }}</td>
-                <td>{{ $student->name }}</td>
-                <td>{{ $student->gender ? 'Laki-Laki' : 'Perempuan' }}</td>
-                <td>{{ $student->email }}</td>
-                <td>{{ $student->grade }}</td>
-                <td>{{ $student->address }}</td>
-                <td>
-                    <a href="{{ route('students.edit', $student->id) }}" class="btn btn-warning btn-sm">Edit</a>
-                    <form action="{{ route('students.destroy', $student->id) }}" method="POST" class="d-inline">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Yakin ingin menghapus?')">Hapus</button>
-                    </form>
-                </td>
-            </tr>
-            @endforeach
-        </tbody>
-    </table>
+    </div>
 </div>
 @endsection

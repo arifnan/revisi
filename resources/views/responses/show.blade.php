@@ -22,21 +22,30 @@
                 </div>
             @endif
 
-            @if ($response->latitude && $response->longitude)
-                <div class="mb-3">
-                    <strong>Koordinat Lokasi:</strong><br>
-                    Latitude: {{ $response->latitude ?? 'N/A' }}<br>
-                    Longitude: {{ $response->longitude ?? 'N/A' }}<br>
-                    @if ($response->is_location_valid)
-                        <span class="badge bg-success">Lokasi Valid</span>
-                    @else
-                        <span class="badge bg-warning">Lokasi Tidak Valid</span>
-                    @endif
-                    @if ($response->formatted_address)
-                        <br>Alamat: {{ $response->formatted_address }}
-                    @endif
-                </div>
-            @endif
+         {{-- Blok BARU dengan Tombol "Tampilkan Lokasi" --}}
+                @if ($response->latitude && $response->longitude)
+                    <div class="mb-3">
+                        <strong>Koordinat Lokasi:</strong><br>
+                        Latitude: {{ $response->latitude ?? 'N/A' }}<br>
+                        Longitude: {{ $response->longitude ?? 'N/A' }}<br>
+
+                        @if ($response->is_location_valid)
+                            <span class="badge bg-success">Lokasi Valid</span>
+                        @else
+                            <span class="badge bg-warning">Lokasi Tidak Valid</span>
+                        @endif
+
+                        @if ($response->formatted_address)
+                            <br>Alamat: {{ $response->formatted_address }}
+                        @endif
+
+                        {{-- Tombol untuk membuka Google Maps --}}
+                        <br>
+                        <a href="https://www.google.com/maps?q={{ $response->latitude }},{{ $response->longitude }}" class="btn btn-info btn-sm mt-2" target="_blank" rel="noopener noreferrer">
+                            Tampilkan Lokasi di Google Maps
+                        </a>
+                    </div>
+                @endif
 
             @if (!$response->photo_path && (!$response->latitude || !$response->longitude))
                 <p>Tidak ada informasi foto atau lokasi yang tersedia untuk respon ini.</p>
@@ -53,7 +62,7 @@
           <i class="bi bi-pencil-square"></i> Edit Foto & Lokasi
         </a>
         <ul class="list-group list-group-flush">
-            @forelse ($response->responseAnswers as $answer)
+            @forelse ($response->answers as $answer)
                 <li class="list-group-item">
                     <strong>{{ $answer->question->question_text ?? 'Pertanyaan Tidak Ditemukan' }}</strong>:<br>
                     {{-- Menampilkan jawaban berdasarkan tipe pertanyaan --}}

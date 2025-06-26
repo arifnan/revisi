@@ -1,5 +1,5 @@
 body {
-    background: linear-gradient(to right, #2193b0, #6dd5ed);
+    background: #3D1860; /* Menggunakan warna dominan */
     height: 100vh;
     display: flex;
     align-items: center;
@@ -30,21 +30,16 @@ body {
     justify-content: center;
 }
 
-.form-control {
-    border-radius: 25px;
+h2.text-center {
+    color: #3D1860; /* Menggunakan warna dominan */
+    font-weight: 600;
 }
 
 .btn-primary {
-    border-radius: 25px;
-    padding: 10px;
-    font-weight: bold;
+    background-color: #3D1860; /* Menggunakan warna dominan */
+    border-color: #3D1860;
 }
 
-.text-center a {
-    text-decoration: none;
-    color: #007bff;
-}
-
-.text-center a:hover {
-    text-decoration: underline;
+.btn-primary:hover {
+    background-color: #5B2A89; /* Warna sekunder untuk hover */
 }

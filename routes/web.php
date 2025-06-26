@@ -10,6 +10,8 @@ use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\ResponseController;
 use App\Http\Controllers\ResponseExportController;
 use App\Http\Controllers\LocationController;
+use App\Http\Controllers\DashboardController;
+use SebastianBergmann\CodeCoverage\Report\Html\Dashboard;
 
 /*
 |--------------------------------------------------------------------------
@@ -29,7 +31,7 @@ Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
     // **Dashboard**
-    Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // **CRUD Admin**
     Route::resource('admin', AdminController::class)->except(['show']);

@@ -29,9 +29,10 @@ class ResponseController extends Controller
             $query->where('form_id', $request->form_id);
         }
 
-        $responsesSummary = $query->get();
+        $responsesSummary = $query->paginate(10); // Misalnya 10 item per halaman
         return view('responses.index', compact('responsesSummary', 'forms'));
     }
+    
 
     public function showResponsesByForm(Form $form)
     {
@@ -43,7 +44,7 @@ class ResponseController extends Controller
 
     public function showResponseDetail(Response $response)
     {
-        $response->load(['student', 'form.teacher', 'responseAnswers.question']);
+        $response->load(['student', 'form.teacher', 'answers.question']);
         return view('responses.show', compact('response'));
     }
 
@@ -201,7 +202,7 @@ class ResponseController extends Controller
             return response()->json(['message' => 'Akses ditolak.'], 403);
         }
 
-        $response->load(['student', 'form.teacher', 'answers.question']);
+         $response->load(['student', 'form.teacher', 'answers.question']);
         return new FormResponseResource($response);
     }
 

@@ -13,21 +13,17 @@ use App\Http\Resources\FormResource; // <-- TAMBAHKAN IMPORT FormResource
 
 class TeacherController extends Controller
 {
-    public function index(Request $request) {
+     public function index(Request $request) {
         $query = Teacher::query();
-    
         // Filter berdasarkan gender
         if ($request->has('gender') && $request->gender !== '') {
             $query->where('gender', $request->gender);
         }
-    
         // Filter berdasarkan mata pelajaran
         if ($request->has('subject') && $request->subject !== '') {
             $query->where('subject', 'like', '%' . $request->subject . '%');
         }
-    
-        $teachers = $query->get();
-    
+        $teachers = $query->paginate(10); // Misalnya 10 item per halaman
         return view('teachers.index', compact('teachers'));
     }
     

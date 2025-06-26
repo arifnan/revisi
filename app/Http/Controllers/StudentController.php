@@ -13,35 +13,29 @@ use App\Imports\StudentsImport;
 
 class StudentController extends Controller
 {
-  public function index(Request $request) {
-        // Hapus atau jadikan komentar baris DB::enableQueryLog() dan dd(DB::getQueryLog());
-        // DB::enableQueryLog();
-
+      public function index(Request $request) {
         $allStudents = Student::all(); // Ambil semua siswa untuk difilter di PHP
-                                       // (karena kolom dienkripsi, filter di DB tidak langsung bisa)
 
         // Filter di PHP setelah semua data diambil dan didekripsi
         if ($request->has('gender') && $request->gender !== '') {
             $genderToFilter = (int)$request->gender;
             $allStudents = $allStudents->where('gender', $genderToFilter);
         }
-    
+
         if ($request->has('grade') && $request->grade !== '') {
             $gradeToFilter = (string)$request->grade;
             $allStudents = $allStudents->where('grade', $gradeToFilter);
         }
 
         // Sekarang, kita akan melakukan paginasi pada koleksi yang sudah difilter
-        $perPage = 100; // Jumlah siswa per halaman
+        $perPage = 10; // Jumlah siswa per halaman (ubah dari 100 ke 10 untuk contoh)
         $currentPage = \Illuminate\Pagination\LengthAwarePaginator::resolveCurrentPage();
         $currentItems = $allStudents->slice(($currentPage - 1) * $perPage, $perPage)->all();
-        
+
         $students = new \Illuminate\Pagination\LengthAwarePaginator($currentItems, count($allStudents), $perPage, $currentPage, [
             'path' => $request->url(),
             'query' => $request->query(),
         ]);
-        
-        // dd(DB::getQueryLog()); // Hapus atau jadikan komentar
 
         return view('students.index', compact('students'));
     }

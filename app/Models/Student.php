@@ -39,9 +39,8 @@ class Student extends Authenticatable
     protected $casts = [
         'password' => 'hashed',
         'gender' => 'boolean',
-        // --- BLOK ENKRIPSI ---
+        // --- DATA ENKRIPSI ---
         'name' => 'encrypted',
-        // 'email' => 'encrypted',
         'address' => 'encrypted',
         'grade' => 'encrypted',
         'profile_photo_path' => 'encrypted',

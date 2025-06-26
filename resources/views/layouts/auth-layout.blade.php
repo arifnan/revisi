@@ -9,7 +9,9 @@
 </head>
 <body>
     <div class="auth-container">
-        <div class="auth-left"></div>
+        <div class="auth-left">
+            <img src="{{ asset('images/logo.png') }}" alt="Logo" class="logo-img"> <!-- Menambahkan logo -->
+        </div>
         <div class="auth-right">
             @yield('content')
         </div>
