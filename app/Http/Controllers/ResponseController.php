@@ -33,6 +33,15 @@ class ResponseController extends Controller
         return view('responses.index', compact('responsesSummary', 'forms'));
     }
     
+    public function show($form_id)
+{
+    $form = Form::with(['questions.options', 'responses.answers'])->findOrFail($form_id);
+    $responses = $form->responses()->with('answers')->latest()->get();
+    
+    return view('responses.index', compact('form', 'responses'));
+}
+
+
 
     public function showResponsesByForm(Form $form)
     {
@@ -75,6 +84,8 @@ class ResponseController extends Controller
 
         return redirect()->route('responses.detail_by_form', $response->form->id)->with('success', 'Respon berhasil diperbarui.');
     }
+
+
 
     public function destroy(Response $response)
     {

@@ -1,87 +1,155 @@
 @extends('layouts.app')
 
-@section('title', 'Daftar Respon Formulir')
-
 @section('content')
-<div class="container mt-4">
-    <h2>Daftar Respon Formulir</h2>
-
-    @if (session('success'))
-        <div class="alert alert-success">
-            {{ session('success') }}
-        </div>
-    @endif
-
-    @if (session('error'))
-        <div class="alert alert-danger">
-            {!! session('error') !!}
-        </div>
-    @endif
-
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        {{-- Dropdown untuk filter berdasarkan form_id --}}
-        <form action="{{ route('responses.index') }}" method="GET" class="d-flex align-items-center">
-            <label for="form_id" class="me-2 mb-0">Filter Formulir:</label>
-            <select name="form_id" id="form_id" class="form-select form-select-sm" onchange="this.form.submit()">
-                <option value="">Semua Formulir</option>
-                @foreach($forms as $form)
-                    <option value="{{ $form->id }}" {{ request('form_id') == $form->id ? 'selected' : '' }}>
-                        {{ $form->title }} ({{ $form->form_code }})
-                    </option>
-                @endforeach
-            </select>
-        </form>
-
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="fw-bold text-dark">Responses for Form: {{ $form->title }}</h1>
         <div>
-            {{-- Tombol Export (sudah ada) --}}
-            <div class="dropdown d-inline-block">
-                <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                    Export Jawaban
-                </button>
-                <ul class="dropdown-menu" aria-labelledby="exportDropdown">
-                    <li><a class="dropdown-item" href="{{ route('responses.export.pdf') }}">Export PDF</a></li>
-                    <li><a class="dropdown-item" href="{{ route('responses.export.excel') }}">Export Excel</a></li>
-                </ul>
-            </div>
-
-            {{-- **TAMBAHKAN TOMBOL IMPORT INI** --}}
-            <a href="{{ route('responses.import.form') }}" class="btn btn-primary btn-sm ms-2">Import Jawaban</a>
+            <button id="showQuestions" class="btn btn-outline-primary me-2">
+                <i class="bi bi-list-check"></i> Pertanyaan
+            </button>
+            <button id="showResponses" class="btn btn-primary">
+                <i class="bi bi-card-checklist"></i> Responses
+            </button>
         </div>
     </div>
 
-    @if ($responsesSummary->isEmpty())
-        <p>Belum ada respons yang tercatat.</p>
-    @else
-        <table class="table table-bordered table-striped">
-            <thead>
-                <tr>
-                    <th>No.</th>
-                    <th>Nama Formulir</th>
-                    <th>Guru Penanggung Jawab</th>
-                    <th>Jumlah Responden</th>
-                    <th>Aksi</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach ($responsesSummary as $summary)
-                    <tr>
-                        <td>{{ $loop->iteration }}</td>
-                        <td>{{ $summary->form->title ?? 'N/A' }}</td>
-                        <td>{{ $summary->form->teacher->name ?? 'N/A' }}</td>
-                        <td>{{ $summary->total_responses }}</td>
-                        <td>
-                            <a href="{{ route('responses.detail_by_form', $summary->form->id) }}" class="btn btn-info btn-sm">Lihat Detail</a>
-                            {{-- Jika Anda ingin opsi hapus ringkasan per form, tambahkan di sini --}}
-                            {{-- <form action="{{ route('responses.destroy_summary', $summary->form->id) }}" method="POST" class="d-inline">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Apakah Anda yakin ingin menghapus semua respon untuk formulir ini?')">Hapus Semua</button>
-                            </form> --}}
-                        </td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
-    @endif
+    <div class="row">
+        <!-- Panel Pertanyaan -->
+        <div id="questionsPanel" class="col-md-4 d-none">
+            <div class"card shadow border-0 h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-question-circle"></i> Daftar Pertanyaan</h5>
+                </div>
+                <div class="card-body overflow-auto" style="max-height: 70vh;">
+                    <ol class="list-group list-group-numbered">
+                        @foreach($form->questions as $question)
+                        <li class="list-group-item d-flex justify-content-between align-items-start">
+                            <div class="ms-2 me-auto">
+                                <div class="fw-bold">{{ $question->question_text }}</div>
+                                <small class="text-muted">{{ $question->question_type }}</small>
+                            </div>
+                        </li>
+                        @endforeach
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel Responses -->
+        <div id="responsesPanel" class="{{ $form->questions->isEmpty() ? 'col-md-12' : 'col-md-8' }}">
+            <div class="card shadow border-0">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-receipt"></i> Detail Responses</h5>
+                </div>
+                <div class="card-body">
+                    @if($responses->isEmpty())
+                        <div class="alert alert-info">Belum ada responses untuk form ini.</div>
+                    @else
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>No</th>
+                                    @foreach($form->questions as $question)
+                                        <th>{{ $question->question_text }}</th>
+                                    @endforeach
+                                    <th>Tanggal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($responses as $index => $response)
+                                <tr>
+                                    <td>{{ $index + 1 }}</td>
+                                    @foreach($form->questions as $question)
+                                        <td>
+                                            @if($question->question_type === 'file_upload')
+                                                @if($response->answers->where('question_id', $question->id)->first()->file_path ?? false)
+                                                    <a href="{{ Storage::url($response->answers->where('question_id', $question->id)->first()->file_path) }}" 
+                                                       target="_blank" class="btn btn-sm btn-outline-primary">
+                                                        Lihat File
+                                                    </a>
+                                                @else
+                                                    -
+                                                @endif
+                                            @else
+                                                {{ $response->answers->where('question_id', $question->id)->first()->answer ?? '-' }}
+                                            @endif
+                                        </td>
+                                    @endforeach
+                                    <td>{{ $response->created_at->format('d M Y H:i') }}</td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<style>
+    .list-group-item:hover {
+        background-color: #f8f9fa;
+        cursor: pointer;
+    }
+    .card {
+        border-radius: 0.5rem;
+    }
+    .card-header {
+        border-radius: 0.5rem 0.5rem 0 0 !important;
+    }
+</style>
+
+@endsection
+
+@section('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const questionsPanel = document.getElementById('questionsPanel');
+    const responsesPanel = document.getElementById('responsesPanel');
+    const showQuestionsBtn = document.getElementById('showQuestions');
+    const showResponsesBtn = document.getElementById('showResponses');
+
+    // Toggle panels
+    function togglePanels(showQuestions) {
+        if(showQuestions) {
+            questionsPanel.classList.remove('d-none');
+            questionsPanel.classList.add('col-md-4');
+            responsesPanel.classList.remove('col-md-12');
+            responsesPanel.classList.add('col-md-8');
+            showQuestionsBtn.classList.add('btn-primary');
+            showQuestionsBtn.classList.remove('btn-outline-primary');
+            showResponsesBtn.classList.remove('btn-primary');
+            showResponsesBtn.classList.add('btn-outline-primary');
+        } else {
+            questionsPanel.classList.add('d-none');
+            questionsPanel.classList.remove('col-md-4');
+            responsesPanel.classList.remove('col-md-8');
+            responsesPanel.classList.add('col-md-12');
+            showQuestionsBtn.classList.remove('btn-primary');
+            showQuestionsBtn.classList.add('btn-outline-primary');
+            showResponsesBtn.classList.add('btn-primary');
+            showResponsesBtn.classList.remove('btn-outline-primary');
+        }
+    }
+
+    // Button events
+    showQuestionsBtn.addEventListener('click', () => togglePanels(true));
+    showResponsesBtn.addEventListener('click', () => togglePanels(false));
+
+    // Right click for questions
+    document.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        togglePanels(true);
+    });
+
+    // Left click for responses
+    responsesPanel.addEventListener('click', function() {
+        togglePanels(false);
+    });
+});
+</script>
 @endsection

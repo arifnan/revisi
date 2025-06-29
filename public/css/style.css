@@ -120,7 +120,7 @@ body.sidebar-collapsed #main-content {
 }
 
 .btn-primary:hover {
-    background-color: var(--secondary-color); /* Menggunakan warna sekunder untuk hover */
+    background-color: ;#3D1860; /* Menggunakan warna sekunder untuk hover */
     border-color: var(--secondary-color);
 }
 

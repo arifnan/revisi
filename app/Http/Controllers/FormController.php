@@ -90,6 +90,24 @@ class FormController extends Controller
         return redirect()->route('forms.index')->with('success', 'Form updated successfully.');
     }
 
+
+    public function show(Form $form)
+{
+    // $this->authorize('view', $form); // Jika Anda menggunakan policy, bisa di-uncomment
+
+    // Eager load relasi yang diperlukan untuk ditampilkan di view
+    $form->load(['teacher', 'questions.options', 'responses.student']);
+
+    // Mengirim data form ke view 'forms.show'
+    // atau jika Anda ingin menampilkan detail respon, Anda bisa redirect ke rute lain
+    // atau menggunakan view yang sama dengan 'responses.detail_by_form'
+    return view('responses.detail_by_form', [
+        'form' => $form,
+        'questions' => $form->questions,
+        'responses' => $form->responses
+    ]);
+}
+
     public function destroy(Form $form)
     {
         // $this->authorize('delete', $form); // Dikomentari untuk sementara

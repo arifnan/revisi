@@ -20,6 +20,7 @@
                         <tr>
                             <th>No</th>
                             <th>Judul</th>
+                            <th>Kode Formulir</th>
                             <th>Guru</th>
                             <th>Tanggal Dibuat</th>
                             <th>Responses</th>
@@ -31,6 +32,7 @@
                         <tr>
                             <td>{{ $index + 1 }}</td>
                             <td>{{ $form->title }}</td>
+                            <td>{{ $form->form_code }}</td>
                             <td>{{ $form->teacher->name }}</td>
                             <td>{{ $form->created_at->format('d M Y') }}</td>
                             <td>{{ $form->responses_count }}</td>
